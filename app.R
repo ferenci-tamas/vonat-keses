@@ -50,6 +50,7 @@ mapdata <- jsonlite::read_json("./data/hu-all.topo.json")
 # mapdata <- download_map_data("countries/hu/hu-all")
 colstops <- readRDS("./data/colstops.rds")
 choices <- readRDS("./data/choices.rds")
+MetData <- readRDS("./data/MetData.rds")
 
 desctext <- paste0(
   "A magyar vonatok késési adatait bemutató, vizualizáló, ",
@@ -70,6 +71,14 @@ vonatszamExplanation <- paste0(
   "adatbázisban.")
 
 dt18nurl <- "https://cdn.datatables.net/plug-ins/2.3.2/i18n/hu.json"
+
+corrVariables <- c("Középhőmérséklet" = "temp",
+                   "Minimumhőmérséklet" = "tmin",
+                   "Maximumhőmérséklet" = "tmax",
+                   "Relatív nedvesség" = "rhum",
+                   "Csapadékösszeg" = "prcp",
+                   "Átlagos szélsebesség" = "wspd",
+                   "Tengerszintre átszámított légnyomás" = "pres")
 
 kesesstat <- function(x, metric) {
   # if(sum(!is.na(x)) < 3) return(NULL)
@@ -282,7 +291,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.08"),
+                  .noWS = "outside"), ", v1.09"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -321,7 +330,9 @@ ui <- navbarPage(
               actionLink("gotoWeek", "Heti mintázat"), " pont, ahol a különböző késési statisztikák esetleges heti mintázatai ",
               "vizsgálhatóak. Az ", actionLink("gotoTraffic", "Állomási forgalom"), "pont tartalma nem szigorúan a késésekhez ",
               "kötődik, de hasznos információkat adhat: megmutatja, hogy adott állomásnak mekkora volt a forgalma; ez ábrázolható ",
-              "időbeli alakulásában, lebontva típus szerint, vagy megjeleníthető adott nap vagy időszak értéke térképen.")
+              "időbeli alakulásában, lebontva típus szerint, vagy megjeleníthető adott nap vagy időszak értéke térképen. ",
+              "A ", actionLink("gotoCorr", "Korrelációk"), " pontban a késéseket lehet összevetni különféle, potenciálisan ",
+              "azzal összefüggő változókkal (például a hőmérséklettel).")
     ),
     h2("Miért született ez az oldal?"),
     p(paste0(
@@ -394,7 +405,10 @@ ui <- navbarPage(
              uiOutput("weekContent")),
     
     tabPanel("Állomási forgalom", value = "traffic",
-             uiOutput("trafficContent"))
+             uiOutput("trafficContent")),
+    
+    tabPanel("Korrelációk", value = "corr",
+             uiOutput("corrContent"))
   )
 )
 
@@ -406,6 +420,7 @@ server <- function(input, output, session) {
   observeEvent(input$gotoDistr, updateNavbarPage(session, "main", selected = "distr"))
   observeEvent(input$gotoWeek, updateNavbarPage(session, "main", selected = "week"))
   observeEvent(input$gotoTraffic, updateNavbarPage(session, "main", selected = "traffic"))
+  observeEvent(input$gotoCorr, updateNavbarPage(session, "main", selected = "corr"))
   
   prev_slider_val <- reactiveVal(NULL)
   
@@ -837,6 +852,36 @@ server <- function(input, output, session) {
             )
           )
         })
+      } else if (currentTab == "corr") {
+        output$corrContent <- renderUI({
+          sidebarLayout(
+            sidebarPanel(
+              radioButtons(
+                "corrMetric", "Megjelenített statisztika",
+                c(">5", ">20", "Átlag", "Medián",
+                  "75. percentilis", "90. percentilis",
+                  "99. percentilis", "Maximum")),
+              selectInput(
+                "corrVariable", "Vizsgált változó",
+                corrVariables),
+              width = 2
+            ),
+            mainPanel(
+              shinycssloaders::withSpinner(highchartOutput("corrOutput")),
+              sliderInput("corrDate",
+                          div("Vizsgált időpont vagy időszak",
+                              bslib::tooltip(
+                                bsicons::bs_icon("question-circle"),
+                                "A csúszka két végét ugyanoda húzva egyetlen nap választható ki.",
+                                placement = "left"
+                              )),
+                          min(ProcData$Datum), max(ProcData$Datum),
+                          c(min(ProcData$Datum), max(ProcData$Datum)), timeFormat = "%m. %d.", width = "100%"),
+              p("A meteorológiai adatok forrás: Meteostat, https://meteostat.net/"),
+              width = 10
+            )
+          )
+        })
       }
     }
     
@@ -1227,6 +1272,27 @@ server <- function(input, output, session) {
         hc_exporting(enabled = TRUE)
     }
     
+    p
+  })
+  
+  output$corrOutput <- renderHighchart({
+    pd <- ProcData[Tipus %in% c("Szakasz", "ZaroSzakasz") &
+               Datum >= input$corrDate[1] &
+               Datum <= input$corrDate[2],
+             kesesstat(KumKeses, input$corrMetric),
+             .(Datum)]
+    pd <- merge(pd, MetData, by = "Datum")
+    pd$variable <- pd[[input$corrVariable]]
+    p <- hchart(pd, "point", hcaes(x = variable, y = value1)) |>
+      hc_xAxis(title = list(text = names(corrVariables)[corrVariables == input$corrVariable])) |>
+      hc_yAxis(title = list(text = keseshun(input$corrMetric))) |>
+      hc_tooltip(headerFormat = "<b>{point.Datum}</b><br>",
+                 pointFormat = paste0(names(corrVariables)[corrVariables == input$corrVariable], ": {point.variable:.1f}<br>",
+                                      keseshun(input$corrMetric), ": {point.value1:.1f}")) |>
+      hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
+      hc_caption(text = figcap) |>
+      hc_credits(enabled = TRUE) |>
+      hc_exporting(enabled = TRUE)
     p
   })
 }

@@ -219,3 +219,10 @@ allomaskoord <- allomaskoord[, .(Allomas = `name`, lat = `@lat`,
 allomaskoord <- allomaskoord[Allomas != ""]
 allomaskoord <- allomaskoord[!duplicated(Allomas)]
 saveRDS(allomaskoord, "./data/allomaskoord.rds")
+
+##### Meteorológiai adatok #####
+
+MetData <- rbindlist(lapply(unique(lubridate::year(ProcData$Datum)), function(yr)
+  fread(paste0("https://data.meteostat.net/daily/", yr, "/12840.csv.gz"))))
+MetData$Datum <- lubridate::ymd(paste0(MetData$year, "-", MetData$month, "-", MetData$day))
+saveRDS(MetData, "./data/MetData.rds")

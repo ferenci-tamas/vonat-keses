@@ -30,9 +30,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Scrape
-        run: Rscript -e 'source("vasut-keses-scraper.R")'
-
       - name: Preprocess
         run: Rscript -e 'source("vasut-keses-preprocess.R")'
 

@@ -1,0 +1,51 @@
+name: Napi update
+
+on:
+  schedule:
+    - cron: '10 20 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::data.table
+            any::rvest
+            any::progress
+            any::purrr
+            any::overpass
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scrape
+        run: Rscript -e 'source("vasut-keses-scraper.R")'
+
+      - name: Preprocess
+        run: Rscript -e 'source("vasut-keses-preprocess.R")'
+
+      - name: Commit results
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add data/raw/raw*.rds
+          git commit -m 'Raw data updated' || echo "No changes to commit"
+          git add data/allomaskoord.rds
+          git commit -m 'allomaskoord updated' || echo "No changes to commit"
+          git add data/MetData.rds
+          git commit -m 'MetData choices updated' || echo "No changes to commit"
+          git add data/ProcData.rds
+          git commit -m 'ProcData updated' || echo "No changes to commit"
+          git push origin || echo "No changes to commit"

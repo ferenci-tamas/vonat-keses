@@ -1,6 +1,6 @@
 library(data.table)
 
-Sys.setlocale(locale = "hu_HU.utf8")
+Sys.setlocale(locale = "hu_HU.UTF-8")
 
 ##### ProcData #####
 

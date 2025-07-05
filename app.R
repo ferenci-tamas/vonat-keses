@@ -48,7 +48,10 @@ allomaskoord <- readRDS("./data/allomaskoord.rds")
 # mapdata <- readRDS("mapdata.rds")
 mapdata <- jsonlite::read_json("./data/hu-all.topo.json")
 # mapdata <- download_map_data("countries/hu/hu-all")
-colstops <- readRDS("./data/colstops.rds")
+colstops <- highcharter::list_parse2(data.frame(
+  q = seq(0, 1, length.out = 100),
+  col = scales::pal_seq_gradient("blue", "red")(
+    seq(0,1, length.out = 100))))
 choices <- readRDS("./data/choices.rds")
 MetData <- readRDS("./data/MetData.rds")
 

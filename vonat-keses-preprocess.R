@@ -195,15 +195,6 @@ saveRDS(list(
     sort(unique(c(ProcData$Indulo, ProcData$Erkezo)))),
   "./data/choices.rds")
 
-##### colstops #####
-
-colstops <- highcharter::list_parse2(data.frame(
-  q = seq(0, 1, length.out = 100),
-  col = scales::pal_seq_gradient("blue", "red")(
-    seq(0,1, length.out = 100))))
-
-saveRDS(colstops, "./data/colstops.rds")
-
 ##### Állomás #####
 
 allomaskoord <- overpass::overpass_query(paste0(

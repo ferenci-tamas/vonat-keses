@@ -26,6 +26,7 @@ jobs:
             any::progress
             any::purrr
             any::osmdata
+            any::R.utils
 
       - name: Checkout
         uses: actions/checkout@v4

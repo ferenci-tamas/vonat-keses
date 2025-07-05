@@ -1,5 +1,7 @@
 library(data.table)
 
+Sys.setlocale(locale = "hu_HU.utf8")
+
 ##### ProcData #####
 
 RawData <- rbindlist(lapply(

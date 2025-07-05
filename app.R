@@ -294,7 +294,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.09"),
+                  .noWS = "outside"), ", v1.10"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -1188,9 +1188,11 @@ server <- function(input, output, session) {
     if(input$weekStation == "Kiválasztott") pd <- pd[Erkezo %in% input$weekStationSel]
     if(input$weekVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$weekVonatSzamSel]
     
-    pd$day <- lubridate::wday(pd$Datum)
-    pd$yearweek <- paste0(lubridate::year(pd$Datum), " - ",
-                          lubridate::week(pd$Datum))
+    pd$day <- lubridate::wday(pd$Datum, label = TRUE,
+                              week_start = 1,
+                              locale = "hu_HU.utf8")
+    pd$yearweek <- paste0(lubridate::isoyear(pd$Datum), " - ",
+                          lubridate::isoweek(pd$Datum))
     
     pd <- pd[Tipus %in% c("Szakasz", "ZaroSzakasz"), kesesstat(KumKeses, input$weekMetric), .(yearweek, day)][order(yearweek, day)]
     if(nrow(pd) == 0) return(NULL)
@@ -1206,6 +1208,9 @@ server <- function(input, output, session) {
     }
     
     p <- p |>
+      hc_xAxis(type = "category",
+               categories = paste(toupper(substring(levels(pd$day), 1, 1)),
+                                  substring(levels(pd$day), 2), sep="")) |>
       hc_title(text = paste0(
         keseshun(input$weekMetric),
         if(input$weekVonatSzam == "Kiválasztott") paste0(", ", paste0(names(choices$VonatNev[choices$VonatNev %in% input$weekVonatSzamSel]), collapse = ", ")) else "",
@@ -1280,10 +1285,10 @@ server <- function(input, output, session) {
   
   output$corrOutput <- renderHighchart({
     pd <- ProcData[Tipus %in% c("Szakasz", "ZaroSzakasz") &
-               Datum >= input$corrDate[1] &
-               Datum <= input$corrDate[2],
-             kesesstat(KumKeses, input$corrMetric),
-             .(Datum)]
+                     Datum >= input$corrDate[1] &
+                     Datum <= input$corrDate[2],
+                   kesesstat(KumKeses, input$corrMetric),
+                   .(Datum)]
     pd <- merge(pd, MetData, by = "Datum")
     pd$variable <- pd[[input$corrVariable]]
     p <- hchart(pd, "point", hcaes(x = variable, y = value1)) |>

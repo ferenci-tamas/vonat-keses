@@ -196,16 +196,16 @@ saveRDS(list(
 
 ##### Állomás #####
 
-allomaskoord <- overpass::overpass_query(paste0(
+allomaskoord <- as.data.table(osmdata::osmdata_data_frame(paste0(
   '[out:csv(::id, ::type, "name", ::lat, ::lon)];',
   'area["ISO3166-1"="HU"][admin_level=2];',
   '(',
   '  node["railway"](area);',
   ');',
-  'out center;'))
-allomaskoord <- fread(allomaskoord)
-allomaskoord <- allomaskoord[, .(Allomas = `name`, lat = `@lat`,
-                                 lon = `@lon`)]
+  'out center;')))
+allomaskoord <- allomaskoord[
+  , .(Allomas = `name`, lat = as.numeric(`@lat`),
+      lon = as.numeric(`@lon`))]
 allomaskoord <- allomaskoord[Allomas != ""]
 allomaskoord <- allomaskoord[!duplicated(Allomas)]
 saveRDS(allomaskoord, "./data/allomaskoord.rds")

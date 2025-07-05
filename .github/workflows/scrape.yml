@@ -47,7 +47,7 @@ jobs:
           git add data/allomaskoord.rds
           git commit -m 'allomaskoord updated' || echo "No changes to commit"
           git add data/MetData.rds
-          git commit -m 'MetData choices updated' || echo "No changes to commit"
+          git commit -m 'MetData updated' || echo "No changes to commit"
           git add data/ProcData.rds
           git commit -m 'ProcData updated' || echo "No changes to commit"
           git add data/choices.rds

@@ -1,7 +1,5 @@
 library(data.table)
 
-Sys.setlocale(locale = "hu_HU.UTF-8")
-
 ##### ProcData #####
 
 RawData <- rbindlist(lapply(
@@ -179,12 +177,14 @@ ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("GÖCSEJ", VonatNev)]$VonatN
 # # 969, 968: ?
 # # 642: úgy tűnik ez tényleg személyvonat, a szám ellenére
 
-ProcData$VonatNev <- as.factor(ProcData$VonatNev)
-ProcData$VonatNevLabel <- as.factor(ProcData$VonatNevLabel)
-ProcData$Indulo <- as.factor(ProcData$Indulo)
-ProcData$Erkezo <- as.factor(ProcData$Erkezo)
-ProcData$Tipus <- as.factor(ProcData$Tipus)
-ProcData$VonatNem <- as.factor(ProcData$VonatNem)
+localefactor <- function(x) factor(x, levels = stringr::str_sort(unique(x), locale = "hu"))
+
+ProcData$VonatNev <- localefactor(ProcData$VonatNev)
+ProcData$VonatNevLabel <- localefactor(ProcData$VonatNevLabel)
+ProcData$Indulo <- localefactor(ProcData$Indulo)
+ProcData$Erkezo <- localefactor(ProcData$Erkezo)
+ProcData$Tipus <- localefactor(ProcData$Tipus)
+ProcData$VonatNem <- localefactor(ProcData$VonatNem)
 
 saveRDS(ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem)], "./data/ProcData.rds")
 

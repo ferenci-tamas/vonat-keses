@@ -17,23 +17,6 @@ jobs:
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         
-      - name: Install system dependencies for locale
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tzdata locales
-
-      - name: Configure and generate hu_HU.UTF-8 locale
-        run: |
-          echo "hu_HU.UTF-8 UTF-8" | sudo tee -a /etc/locale.gen > /dev/null
-          sudo locale-gen hu_HU.UTF-8
-          sudo localectl set-locale LANG="hu_HU.UTF-8"
-
-      - name: Set locale environment variables for R
-        run: |
-          echo "LANG=hu_HU.UTF-8" >> $GITHUB_ENV
-          echo "LC_ALL=hu_HU.UTF-8" >> $GITHUB_ENV
-          echo "LANGUAGE=hu_HU.UTF-8" >> $GITHUB_ENV
-
       - name: Install packages
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -44,9 +27,13 @@ jobs:
             any::purrr
             any::osmdata
             any::R.utils
+            any::stringr
 
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Scrape
+        run: Rscript -e 'source("vonat-keses-scraper.R")'
 
       - name: Preprocess
         run: Rscript -e 'source("vonat-keses-preprocess.R")'

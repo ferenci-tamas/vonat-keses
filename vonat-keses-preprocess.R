@@ -15,9 +15,9 @@ RawData[Várható == ""]$Várható <- NA
 RawData[Várható.1 == ""]$Várható.1 <- NA
 RawData[Km == ""]$Km <- NA
 
-unique(RawData[is.na(Km)]$Állomás) # mind külföldi kell legyen
+# unique(RawData[is.na(Km)]$Állomás) # mind külföldi kell legyen
 RawData <- RawData[!is.na(Km)]
-length(which(is.na(as.numeric(RawData$Km)))) == 0
+stopifnot(length(which(is.na(as.numeric(RawData$Km)))) == 0)
 RawData$Km <- as.numeric(RawData$Km)
 
 alkalmas <- function(x) {
@@ -27,10 +27,10 @@ alkalmas <- function(x) {
     !any(is.na(as.numeric(substring(RawData$Menetrend.szerint, 4, 5))) & !is.na(RawData$Menetrend.szerint))
 }
 
-alkalmas(RawData$Menetrend.szerint)
-alkalmas(RawData$Menetrend.szerint.1)
-alkalmas(RawData$Tényleges)
-alkalmas(RawData$Tényleges.1)
+stopifnot(alkalmas(RawData$Menetrend.szerint))
+stopifnot(alkalmas(RawData$Menetrend.szerint.1))
+stopifnot(alkalmas(RawData$Tényleges))
+stopifnot(alkalmas(RawData$Tényleges.1))
 
 RawData[, Menetrend.szerint.num := as.numeric(substring(Menetrend.szerint, 1, 2)) * 60 + as.numeric(substring(Menetrend.szerint, 4, 5))]
 RawData[, Menetrend.szerint.1.num := as.numeric(substring(Menetrend.szerint.1, 1, 2)) * 60 + as.numeric(substring(Menetrend.szerint.1, 4, 5))]
@@ -40,7 +40,7 @@ RawData[, Tényleges.1.num := as.numeric(substring(Tényleges.1, 1, 2)) * 60 + a
 RawData[Tényleges.1.num - Tényleges.num < 0 & Tényleges.1.num - Tényleges.num >= -720,
         c("Tényleges", "Tényleges.1", "Tényleges.num", "Tényleges.1.num") := list(NA, NA, NA, NA)]
 
-!any(RawData[, .(sum(is.na(Vonat)), sum(!is.na(Vonat))), .(Datum)][, !xor(V1, V2)]) # vagy minden Vonat ki van töltve vagy egy sem egy nap
+stopifnot(!any(RawData[, .(sum(is.na(Vonat)), sum(!is.na(Vonat))), .(Datum)][, !xor(V1, V2)])) # vagy minden Vonat ki van töltve vagy egy sem egy nap
 # amelyik nap nincs, azt kitöltjük
 
 RawData <- merge(RawData, unique(RawData[, .(Datum, VonatSzam)])[, .(VonatSzam, Vonat = 1:.N) , .(Datum)], by = c("Datum", "VonatSzam"))
@@ -48,7 +48,7 @@ RawData$Vonat <- ifelse(is.na(RawData$Vonat.x), RawData$Vonat.y, RawData$Vonat.x
 RawData$Vonat.x <- NULL
 RawData$Vonat.y <- NULL
 
-nrow(RawData[, .N, .(Datum, Vonat, Állomás)][N > 1]) == 0
+stopifnot(nrow(RawData[, .N, .(Datum, Vonat, Állomás)][N > 1]) == 0)
 
 RawData <- RawData[, if (.N > 1) .SD, .(Datum, Vonat)]
 
@@ -110,7 +110,7 @@ names(ProcData)[names(ProcData) == "VonatSzam"] <- "VonatNev"
 
 ProcData$VonatSzam <- as.numeric(sapply(strsplit(ProcData$VonatNev, " "), `[[`, 1))
 
-ProcData$VonatNev <- stringr::str_squish(ProcData$VonatNev)
+ProcData$VonatNev <- trimws(gsub("[\\s\\h]+", " ", ProcData$VonatNev, perl = TRUE))
 
 for(remstr in paste0(", 2025.06.", 11:20, "."))
   ProcData$VonatNev <- gsub(remstr, "", ProcData$VonatNev)
@@ -129,25 +129,24 @@ ProcData <- merge(ProcData, ProcData[, .(VonatNevLabel = names(sort(table(VonatN
 
 qgrepl <- function(x) grepl(x, ProcData$VonatNevLabel, ignore.case = TRUE)
 
-ProcData$VonatNem <- dplyr::case_when(
-  qgrepl("személyvonat") ~ "Személyvonat",
-  qgrepl("InterCity") ~ "InterCity",
-  qgrepl("InterRégió") ~ "InterRégió",
-  qgrepl("railjet xpress") ~ "Railjet xpress",
-  qgrepl("railjet") ~ "Railjet",
-  qgrepl("gyorsvonat") ~ "Gyorsvonat",
-  qgrepl("TramTrain") ~ "TramTrain",
-  qgrepl("Expresszvonat") ~ "Expresszvonat",
-  qgrepl("sebesvonat") ~ "Sebesvonat",
-  qgrepl("EuroCity") ~ "EuroCity",
-  qgrepl("EuRegio") ~ "EuRegio",
-  qgrepl("EuroNight") ~ "EuroNight",
-  qgrepl("Night Jet") ~ "Night Jet",
-  qgrepl("Interregional") ~ "Interregional",
-  qgrepl("International") ~ "International",
-  qgrepl("vonatpótló autóbusz") ~ "Vonatpótló autóbusz",
-  .default = "Egyéb"
-)
+ProcData$VonatNem <- rep("Egyéb", nrow(ProcData))
+
+ProcData$VonatNem[qgrepl("személyvonat")] <- "Személyvonat"
+ProcData$VonatNem[qgrepl("InterCity")] <- "InterCity"
+ProcData$VonatNem[qgrepl("InterRégió")] <- "InterRégió"
+ProcData$VonatNem[qgrepl("railjet xpress")] <- "Railjet xpress"
+ProcData$VonatNem[qgrepl("railjet")] <- "Railjet"
+ProcData$VonatNem[qgrepl("gyorsvonat")] <- "Gyorsvonat"
+ProcData$VonatNem[qgrepl("TramTrain")] <- "TramTrain"
+ProcData$VonatNem[qgrepl("Expresszvonat")] <- "Expresszvonat"
+ProcData$VonatNem[qgrepl("sebesvonat")] <- "Sebesvonat"
+ProcData$VonatNem[qgrepl("EuroCity")] <- "EuroCity"
+ProcData$VonatNem[qgrepl("EuRegio")] <- "EuRegio"
+ProcData$VonatNem[qgrepl("EuroNight")] <- "EuroNight"
+ProcData$VonatNem[qgrepl("Night Jet")] <- "Night Jet"
+ProcData$VonatNem[qgrepl("Interregional")] <- "Interregional"
+ProcData$VonatNem[qgrepl("International")] <- "International"
+ProcData$VonatNem[qgrepl("vonatpótló autóbusz")] <- "Vonatpótló autóbusz"
 
 # # unique(ProcData[VonatSzam < 100]$VonatNem)
 # # unique(ProcData[VonatSzam < 100 & VonatNem == "Egyéb"]$VonatNev)
@@ -213,7 +212,7 @@ saveRDS(allomaskoord, "./data/allomaskoord.rds")
 
 ##### Meteorológiai adatok #####
 
-MetData <- rbindlist(lapply(unique(lubridate::year(ProcData$Datum)), function(yr)
+MetData <- rbindlist(lapply(unique(format(unique(ProcData$Datum), "%Y")), function(yr)
   fread(paste0("https://data.meteostat.net/daily/", yr, "/12840.csv.gz"))))
-MetData$Datum <- lubridate::ymd(paste0(MetData$year, "-", MetData$month, "-", MetData$day))
+MetData$Datum <- as.Date(paste0(MetData$year, "-", MetData$month, "-", MetData$day))
 saveRDS(MetData, "./data/MetData.rds")

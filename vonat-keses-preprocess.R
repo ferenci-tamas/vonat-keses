@@ -131,6 +131,7 @@ qgrepl <- function(x) grepl(x, ProcData$VonatNevLabel, ignore.case = TRUE)
 
 ProcData$VonatNem <- rep("Egyéb", nrow(ProcData))
 
+ProcData$VonatNem[qgrepl("vonatpótló autóbusz")] <- "Vonatpótló autóbusz"
 ProcData$VonatNem[qgrepl("személyvonat")] <- "Személyvonat"
 ProcData$VonatNem[qgrepl("InterCity")] <- "InterCity"
 ProcData$VonatNem[qgrepl("InterRégió")] <- "InterRégió"
@@ -146,7 +147,6 @@ ProcData$VonatNem[qgrepl("EuroNight")] <- "EuroNight"
 ProcData$VonatNem[qgrepl("Night Jet")] <- "Night Jet"
 ProcData$VonatNem[qgrepl("Interregional")] <- "Interregional"
 ProcData$VonatNem[qgrepl("International")] <- "International"
-ProcData$VonatNem[qgrepl("vonatpótló autóbusz")] <- "Vonatpótló autóbusz"
 
 # # unique(ProcData[VonatSzam < 100]$VonatNem)
 # # unique(ProcData[VonatSzam < 100 & VonatNem == "Egyéb"]$VonatNev)

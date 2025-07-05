@@ -83,6 +83,8 @@ corrVariables <- c("Középhőmérséklet" = "temp",
                    "Átlagos szélsebesség" = "wspd",
                    "Tengerszintre átszámított légnyomás" = "pres")
 
+cutlabs <- c("-0", "1-5", "6-10", "11-15", "16-20", "21-30", "31-45", "46-60", "61-")
+
 kesesstat <- function(x, metric) {
   # if(sum(!is.na(x)) < 3) return(NULL)
   
@@ -103,7 +105,7 @@ kesesstat <- function(x, metric) {
   
   if ("Megoszlás" %in% metric) {
     tab <- table(cut(x, c(-Inf, 0, 5, 10, 15, 20, 30, 45, 60, Inf)))
-    stats_list[["Megoszlás"]] <- c("-0", "0-5", "5-10", "10-15", "15-20", "20-30", "30-45", "45-60", "60-")
+    stats_list[["Megoszlás"]] <- cutlabs
     value1_list[["Megoszlás"]] <- as.numeric(prop.table(tab)) * 100
     value2_list[["Megoszlás"]] <- as.numeric(tab)
   }
@@ -178,8 +180,7 @@ kesesstat <- function(x, metric) {
   )
   
   res[, formatted := fifelse(
-    stat %in% c("-0", "0-5", "5-10", "10-15", "15-20", "20-30",
-                "30-45", "45-60", "60-", ">5", ">20"),
+    stat %in% c(cutlabs, ">5", ">20"),
     paste0(round(value1, 1), "% (", value2, ")"),
     fifelse(stat %in% c("Átlag", "Medián", "75. percentilis",
                         "90. percentilis", "99. percentilis",
@@ -294,7 +295,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.10"),
+                  .noWS = "outside"), ", v1.11"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -995,11 +996,14 @@ server <- function(input, output, session) {
       
       if(input$trendLog) p <- p |> hc_yAxis(type = "logarithmic")
     } else if(input$trendMode == "Összetétel (diszkrét)") {
+      pd$stat <- factor(pd$stat, levels = cutlabs)
       p <- hchart(pd, "column",
-                  hcaes(x = Datum, y = value1, group = factor(stat, levels = c("-0", "0-5", "5-10", "10-15", "15-20", "20-30", "30-45", "45-60", "60-")))) |>
+                  hcaes(x = Datum, y = value1, group = stat)) |>
         hc_plotOptions(series = list(stacking = "normal")) |>
         hc_tooltip(valueDecimals = 1, valueSuffix = "%") |>
-        hc_yAxis(title = list(text = "Megoszlás [%]"), reversedStacks = FALSE, min = 0, max = 100) |>
+        hc_yAxis(title = list(
+          text = "Megoszlás [%]"), reversedStacks = FALSE,
+          min = 0, max = 100) |>
         hc_legend(title = list(text = "Késési idő [perc]"))
     }
     

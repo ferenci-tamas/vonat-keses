@@ -25,7 +25,7 @@ jobs:
             any::rvest
             any::progress
             any::purrr
-            any::overpass
+            any::osmdata
 
       - name: Checkout
         uses: actions/checkout@v4

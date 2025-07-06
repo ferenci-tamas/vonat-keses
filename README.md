@@ -1,7 +1,7 @@
 Vonatkésési statisztika
 ================
 Ferenci Tamás (<https://medstat.hu>)
-<br>2025-07-04
+<br>2025-07-06
 
 A weboldal elérhető a következő címen: <https://www.vonat-keses.hu/>.
 
@@ -26,6 +26,33 @@ teljes forráskódját:
   [vonat-keses-preprocess.R](https://github.com/ferenci-tamas/vonat-keses/blob/main/vonat-keses-preprocess.R)
 - A weboldal:
   [app.R](https://github.com/ferenci-tamas/vonat-keses/blob/main/app.R)
+
+## Ismert hibák és hiányosságok
+
+- Az adatok letöltése naponta egyetlen egyszer, 23 óra környékén
+  történik. (Egyrészt, hogy még a legnagyobb rosszindulattal se lehessen
+  azt mondani, hogy az adatgyűjtésem érzékelhetően terheli a MÁV
+  szervereit, de a még fontosabb, hogy a napi szintű statisztikák
+  készítéséhez, ami az oldalam célja, szükség sincs többre: az adott
+  napi késések másnap törlődnek az Elvirából, így épp éjfél előtt pont a
+  megfelelő időpont az összes aznapi késés begyűjtésére.) A problémát
+  egyedül az jelenti, hogy egy-két vonat kicsivel éjfél előtt indul, és
+  éjfélkor még nincs meg az összes késése – vagy, nemzetközi vonatok
+  esetében, lehet, hogy egyetlen egy sem, mert még el sem ért az
+  országhatárig – de a másnapi statisztikában szintén nem fognak
+  megjelenni, mert az indulás időpontja miatt megelőző napiként már
+  törlődtek addigra. Ezzel elveszíthetünk egy-két vonatot, de ez
+  valószínűleg minimális szám.
+- Noha az OpenStreetMap több mint 2500 vasútállomást tartalmaz, és így
+  van hozzá koordinátánk, néhány még így is hiányzik. Csak a
+  nagyságrendek végett, július eleji állapot szerint 1350 állomás
+  illetve megállóhely szerepel az Elvirában, de ebből csak 1099-hez van
+  koordináta az OpenStreetMap-ből. Ez első ránézésre nem elhanyagolható
+  veszteségnek tűnik, de valójában a különbözet szinte kizárólag a
+  vonatpótló autóbuszok megállóhelyeiből áll, amik joggal nem
+  szerepelnek az OpenStreetMap vasútállomási koordinátái között. Ezek
+  tehát a térképes ábrázolásról valóban elvesznek (de fontos
+  hangsúlyozni, hogy ettől még az összes többi elemzésben szerepelnek).
 
 ## Statisztikai mutatók a késések jellemzésére
 

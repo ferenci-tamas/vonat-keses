@@ -164,10 +164,17 @@ ProcData$VonatNem[qgrepl("International")] <- "International"
 # # unique(ProcData[VonatSzam >= 500 & VonatSzam < 1000]$VonatNem)
 # # unique(ProcData[VonatSzam >= 500 & VonatSzam < 1000 & VonatNem == "Egyéb"]$VonatNev)
 # # unique(ProcData[VonatSzam >= 500 & VonatSzam < 1000 & VonatNem == "Személyvonat"]$VonatNev)
-ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("BAKONY", VonatNev)]$VonatNem <- "InterCity"
-ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("SAVARIA", VonatNev)]$VonatNem <- "InterCity"
-ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("GÖCSEJ", VonatNev)]$VonatNem <- "InterCity"
+ProcData[VonatSzam %in% c(900, 901, 902, 903, 904, 905, 906, 907,
+                          908, 909, 913, 914, 915, 916, 918, 919)]$VonatNem <- "InterCity" # BAKONY
+# ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("BAKONY", VonatNev)]$VonatNem <- "InterCity"
+ProcData[VonatSzam %in% c(921, 922, 923, 924, 925, 926, 927, 928,
+                          929, 934, 937, 938)]$VonatNem <- "InterCity" # SAVARIA
+# ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("SAVARIA", VonatNev)]$VonatNem <- "InterCity"
+ProcData[VonatSzam %in% c(950, 951, 952, 953, 954, 955, 956, 957,
+                          958, 959, 963, 964, 966, 967)]$VonatNem <- "InterCity" # GÖCSEJ
+# ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("GÖCSEJ", VonatNev)]$VonatNem <- "InterCity"
 # ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("KRESZ GÉZA", VonatNev)]$VonatNem <- "InterCity"
+ProcData[VonatSzam %in% c(826, 829)]$VonatNem <- "InterCity" # SOMOGY
 # ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("SOMOGY", VonatNev)]$VonatNem <- "InterCity"
 # ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("RIPPL-RÓNAI", VonatNev)]$VonatNem <- "InterCity"
 # ProcData[VonatSzam >= 500 & VonatSzam < 1000][grepl("MECSEK", VonatNev)]$VonatNem <- "InterCity"

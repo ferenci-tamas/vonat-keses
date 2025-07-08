@@ -51,7 +51,7 @@ res <- lapply(1:maxv, function(v) {
   },
   error = function(e) return(NULL),
   warning = function(w) return(NULL))
-}) 
+})
 
 saveRDS(res, paste0(
   "./data/raw/raw", format(as.Date(datum, format = "%y.%m.%d"),

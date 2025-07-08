@@ -37,21 +37,22 @@ pb$tick(0)
 
 res <- lapply(1:maxv, function(v) {
   pb$tick()
-  pg <- purrr::insistently(function() rvest::read_html(paste0(
-    elviraurl, v, "&d=", datum, "&ed=", EDszam)),
-    rate = purrr::rate_delay(pause = 2, max_times = 10))()
-  tab <- rvest::html_table(pg, header = FALSE)
-  if(length(tab) == 0) return(NULL) else {
-    tab <- tab[[1]]
+  tryCatch({
+    pg <- purrr::insistently(function() rvest::read_html(paste0(
+      elviraurl, v, "&d=", datum, "&ed=", EDszam)),
+      rate = purrr::rate_delay(pause = 2, max_times = 10))()
+    tab <- rvest::html_table(pg, header = FALSE)[[1]]
     tab <- if(tab$X1[3] == "Km") tab[-c(1, 3),] else tab[-2,]
     cbind(setNames(tab[-1,], make.names(as.character(tab[1,]),
                                         unique = TRUE)),
           Datum = as.Date(datum, format = "%y.%m.%d"), Vonat = v,
           VonatSzam = rvest::html_text(rvest::html_nodes(
             pg, xpath = "//div[@id='tul']/h2")))
-  }
-})
+  },
+  error = function(e) return(NULL),
+  warning = function(w) return(NULL))
+}) 
 
 saveRDS(res, paste0(
   "./data/raw/raw", format(as.Date(datum, format = "%y.%m.%d"),
-                    "%Y%m%d"), ".rds"))
+                           "%Y%m%d"), ".rds"))

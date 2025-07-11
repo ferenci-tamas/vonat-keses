@@ -16,6 +16,7 @@ RawData[Várható.1 == ""]$Várható.1 <- NA
 RawData[Km == ""]$Km <- NA
 
 # unique(RawData[is.na(Km)]$Állomás) # mind külföldi kell legyen
+RawData <- RawData[Datum != "2025-07-07" | !Állomás %in% unique(RawData[is.na(Km)]$Állomás)]
 RawData <- RawData[!is.na(Km)]
 stopifnot(length(which(is.na(as.numeric(RawData$Km)))) == 0)
 RawData$Km <- as.numeric(RawData$Km)
@@ -99,6 +100,8 @@ ProcData[, Nominalis := fifelse(Nominalis < -720, Nominalis + 1440, Nominalis)]
 ProcData[, KumNominalis := fifelse(KumNominalis < -720, KumNominalis + 1440, KumNominalis)]
 ProcData[, Tenyleges := fifelse(Tenyleges < -720, Tenyleges + 1440, Tenyleges)]
 ProcData[, KumTenyleges := fifelse(KumTenyleges < -720, KumTenyleges + 1440, KumTenyleges)]
+ProcData[Datum == "2025-07-07" & VonatSzam %in% c("568 TOKAJ InterCity", "16706 ARANYPART Expresszvonat"),
+         KumTenyleges := fifelse(KumTenyleges < -600, KumTenyleges + 1440, KumTenyleges)]
 
 ProcData$Keses <- ProcData$Tenyleges - ProcData$Nominalis
 ProcData$KumKeses <- ProcData$KumTenyleges - ProcData$KumNominalis

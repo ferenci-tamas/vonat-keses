@@ -1,7 +1,7 @@
 Vonatkésési statisztika
 ================
 Ferenci Tamás (<https://medstat.hu>)
-<br>2025-07-06
+<br>2025-07-18
 
 A weboldal elérhető a következő címen: <https://www.vonat-keses.hu/>.
 
@@ -53,6 +53,52 @@ teljes forráskódját:
   szerepelnek az OpenStreetMap vasútállomási koordinátái között. Ezek
   tehát a térképes ábrázolásról valóban elvesznek (de fontos
   hangsúlyozni, hogy ettől még az összes többi elemzésben szerepelnek).
+
+## A késések mérése és dekompozíciója
+
+A MÁV általában “vonat késéséről” szokott beszélni, de számomra nem
+egyértelmű, hogy ez a fogalom mit jelent, mivel egy vonat több helyen is
+megáll, mindenhol van vagy lehet valamekkora késése, amik –
+természetesen – nem feltétlenül egyeznek egymással. Rendszeresen
+mondanak olyat, hogy a vonatok hány százaléka késett több mint 20
+percet, de sehol nem találtam meg annak a definícióját, hogy egy vonat
+több mint 20 percet késik: mit jelent ez, melyik megállójában kell ehhez
+több mint 20 perc késésének lennie? Az összesnél? Elég egynél? Több mint
+a megállások felénél? Esetleg egy kiemelt megállásnál, például a
+végállomáson?
+
+Akárhogy is, szerintem tisztább az, ha egész egyszerűen nem vonat
+késéséről beszélünk, hanem megállásonkénti késésről (vagyis meg sem
+próbáljuk felaggregálni a késést vonat szintjére, és így megspóroljuk
+azt a problémát is, hogy ezt hogyan kell megtenni, meg egyáltalán, ez a
+lépés felesleges – miért kellene feltétlenül vonat szintjén beszélni a
+késésről?). Ha egy vonat 10 helyen áll meg, akkor ő egyszerűen 10 késést
+fog szolgáltatni az aznapi adatokhoz.
+
+Még egy dolgot érdemes megemlíteni itt. Az, hogy egy vonat egy adott
+megállóba mekkora késéssel érkezik (nevezzük ezt **teljes késésnek**),
+szétszedhető több részre. Nézzük meg, hogy egy vonat hol késhet:
+
+- Elindulhat később az indulóállomásáról, mint menetrend szerint
+  kellene; ezt hívom úgy, hogy **indulási késés**.
+- Minden egyes közbenső állomásán előfordulhat, hogy többet áll, mint
+  menetrend szerint kellene; ezt hívom úgy, hogy **állomási késés**.
+- Végül minden egyes, két állomása közti szakaszánál előfordulhat, hogy
+  több idő alatt teszi meg, mint menetrend szerint kellene; ezt hívom
+  úgy, hogy **nyíltvonali késés**.
+
+(Bevallom nem néztem utána, hogy ennek van-e valamilyen tudománya, az
+elnevezéseket is magamtól találtam ki, úgyhogy könnyen lehet, hogy ennek
+semmi köze a hivatalos terminológiához.)
+
+Az, hogy egy vonat adott állomásra mekkora késéssel érkezik, tehát a
+teljes késése az indulási késésének, az összes korábbi állomáson
+bekövetkezett állomási késéseinek, és az összes korábbi szakaszon
+bekövetkezett nyíltvonali késéseinek az *összege*. A fenti logikával
+egyszerű összegről van szó, ezért hívhatjuk ezt dekompozíciónak: a
+késést szétszedjük részeire, melyekből összegzéssel adódik ki a teljes
+késés. Ez a dekompozíció segíthet a késések jobb megértésében, mert
+mutatja, hogy a késés miből jött, hol és hogyan halmozódott fel.
 
 ## Statisztikai mutatók a késések jellemzésére
 

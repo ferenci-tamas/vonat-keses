@@ -296,7 +296,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.12"),
+                  .noWS = "outside"), ", v1.13"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -677,7 +677,7 @@ server <- function(input, output, session) {
                              "Állomási késés", "Nyíltvonali késés")),
               shinyWidgets::airDatepickerInput(
                 "databaseDate", "Dátum",
-                c(min(ProcData$Datum), max(ProcData$Datum)),
+                c(max(ProcData$Datum) - 7, max(ProcData$Datum)),
                 minDate = min(ProcData$Datum),
                 maxDate = max(ProcData$Datum),
                 range = TRUE),

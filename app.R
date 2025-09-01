@@ -44,6 +44,7 @@ options(highcharter.download_map_data = FALSE)
 # source("hw_grid.R")
 
 ProcData <- readRDS("./data/ProcData.rds")
+RawData <- readRDS("./data/RawData.rds")
 allomaskoord <- readRDS("./data/allomaskoord.rds")
 # mapdata <- readRDS("mapdata.rds")
 mapdata <- jsonlite::read_json("./data/hu-all.topo.json")
@@ -295,7 +296,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.11"),
+                  .noWS = "outside"), ", v1.12"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -669,10 +670,10 @@ server <- function(input, output, session) {
                            div("Ábrázolt jellemző",
                                bslib::tooltip(
                                  bsicons::bs_icon("question-circle"),
-                                 HTML(kesesExplanation),
+                                 HTML(paste0("<b>Nyers adatok</b>: A menetrend szerinti és tényleges érkezési és indulási időpontok.<br>", kesesExplanation)),
                                  placement = "left"
                                )),
-                           c("Teljes késés", "Indulási késés",
+                           c("Nyers adatok", "Teljes késés", "Indulási késés",
                              "Állomási késés", "Nyíltvonali késés")),
               shinyWidgets::airDatepickerInput(
                 "databaseDate", "Dátum",
@@ -1143,14 +1144,23 @@ server <- function(input, output, session) {
   })
   
   output$databaseOutput <- DT::renderDT({
+    pd <- if(input$databaseMode == "Nyers adatok") RawData else ProcData
     pd <- if(length(input$databaseDate) == 2)
-      ProcData[Datum >= input$databaseDate[1] &
+      pd[Datum >= input$databaseDate[1] &
                  Datum <= input$databaseDate[2]] else
-                   ProcData[Datum == input$databaseDate]
+                   pd[Datum == input$databaseDate]
     pd <- pd[VonatSzam %in% input$databaseVonat]
     pd <- pd[VonatNem %in% input$databaseVonatNem]
     
-    if(input$databaseMode == "Nyíltvonali késés") {
+    if(input$databaseMode == "Nyers adatok") {
+      pd <- pd[Állomás %in% input$databaseAllomas]
+      pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
+                   `Vonatnem` = VonatNem, Állomás,
+                   `Menetrend szerinti érkezés` = Menetrend.szerint,
+                   `Tényleges érkezés` = Tényleges,
+                   `Menetrend szerinti indulás` = Menetrend.szerint.1,
+                   `Tényleges indulás` = Tényleges.1)]
+    } else if(input$databaseMode == "Nyíltvonali késés") {
       pd <- pd[Indulo %in% input$databaseAllomas |
                  Erkezo %in% input$databaseAllomas]
       pd <- pd[Tipus %in% c("Szakasz", "ZaroSzakasz"),

@@ -215,19 +215,24 @@ saveRDS(list(
 
 ##### Állomás #####
 
-allomaskoord <- as.data.table(osmdata::osmdata_data_frame(paste0(
+allomaskoord <- tryCatch(as.data.table(osmdata::osmdata_data_frame(paste0(
   '[out:csv(::id, ::type, "name", ::lat, ::lon)];',
   'area["ISO3166-1"="HU"][admin_level=2];',
   '(',
   '  node["railway"](area);',
   ');',
-  'out center;')))
-allomaskoord <- allomaskoord[
-  , .(Allomas = `name`, lat = as.numeric(`@lat`),
-      lon = as.numeric(`@lon`))]
-allomaskoord <- allomaskoord[Allomas != ""]
-allomaskoord <- allomaskoord[!duplicated(Allomas)]
-saveRDS(allomaskoord, "./data/allomaskoord.rds")
+  'out center;'))), error = function(e) {
+    print(e)
+    return(NULL)
+  })
+if(!is.null(allomaskoord)) {
+  allomaskoord <- allomaskoord[
+    , .(Allomas = `name`, lat = as.numeric(`@lat`),
+        lon = as.numeric(`@lon`))]
+  allomaskoord <- allomaskoord[Allomas != ""]
+  allomaskoord <- allomaskoord[!duplicated(Allomas)]
+  saveRDS(allomaskoord, "./data/allomaskoord.rds")
+}
 
 ##### Meteorológiai adatok #####
 

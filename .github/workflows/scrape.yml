@@ -30,7 +30,7 @@ jobs:
             any::stringr
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         
       - name: Scrape
         run: Rscript -e 'source("vonat-keses-scraper.R")'
@@ -43,7 +43,7 @@ jobs:
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
           git add data/raw/raw*.rds
-          git commit -m 'Raw data updated' || echo "No changes to commit"
+          git commit -m 'Individual raw data updated' || echo "No changes to commit"
           git add data/allomaskoord.rds
           git commit -m 'allomaskoord updated' || echo "No changes to commit"
           git add data/MetData.rds

@@ -195,7 +195,14 @@ ProcData$Erkezo <- localefactor(ProcData$Erkezo)
 ProcData$Tipus <- localefactor(ProcData$Tipus)
 ProcData$VonatNem <- localefactor(ProcData$VonatNem)
 
-saveRDS(ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem)], "./data/ProcData.rds")
+uvnl <- unique(ProcData$VonatNevLabel)
+patternCel <- ".*?\\(.*? - (.*)\\).*"
+patternIndulo <- ".*?\\((.*) -.*"
+
+ProcData <- ProcData[data.table(VonatNevLabel = uvnl, Kiindulasi = ifelse(grepl(patternIndulo, uvnl), sub(patternIndulo, "\\1", uvnl), NA_character_)), on = "VonatNevLabel"]
+ProcData <- ProcData[data.table(VonatNevLabel = uvnl, Cel = ifelse(grepl(patternCel, uvnl), sub(patternCel, "\\1", uvnl), NA_character_)), on = "VonatNevLabel"]
+
+saveRDS(ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem, Kiindulasi, Cel)], "./data/ProcData.rds")
 
 RawData <- RawData[order(Datum, Vonat, VonatNev)]
 
@@ -210,8 +217,10 @@ saveRDS(list(
   VonatNem = sort(unique(ProcData$VonatNem)),
   AllomasErkezo = sort(unique(ProcData$Erkezo)),
   AllomasErkezoIndulo =
-    sort(unique(c(ProcData$Indulo, ProcData$Erkezo)))),
-  "./data/choices.rds")
+    sort(unique(c(ProcData$Indulo, ProcData$Erkezo))),
+  AllomasKiindulasi = sort(unique(ProcData$Kiindulasi)),
+  AllomasCel = sort(unique(ProcData$Cel))
+), "./data/choices.rds")
 
 ##### Állomás #####
 
@@ -236,7 +245,12 @@ if(!is.null(allomaskoord)) {
 
 ##### Meteorológiai adatok #####
 
-MetData <- rbindlist(lapply(unique(format(unique(ProcData$Datum), "%Y")), function(yr)
-  fread(paste0("https://data.meteostat.net/daily/", yr, "/12840.csv.gz"))))
-MetData$Datum <- as.Date(paste0(MetData$year, "-", MetData$month, "-", MetData$day))
-saveRDS(MetData, "./data/MetData.rds")
+MetData <- tryCatch(rbindlist(lapply(unique(format(unique(ProcData$Datum), "%Y")), function(yr)
+  fread(paste0("https://data.meteostat.net/daily/", yr, "/12840.csv.gz")))), error = function(e) {
+    print(e)
+    return(NULL)
+  })
+if(!is.null(MetData)) {
+  MetData$Datum <- as.Date(paste0(MetData$year, "-", MetData$month, "-", MetData$day))
+  saveRDS(MetData, "./data/MetData.rds")
+}

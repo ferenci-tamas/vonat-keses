@@ -203,7 +203,15 @@ ProcData$Kiindulasi <- ifelse(grepl(patternKiindulasi, ProcData$VonatNevLabel),
 ProcData$Cel <- ifelse(grepl(patternCel, ProcData$VonatNevLabel),
                        sub(patternCel, "\\1", ProcData$VonatNevLabel), NA_character_)
 
-saveRDS(ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem, Kiindulasi, Cel)], "./data/ProcData.rds")
+ProcData <- ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem, Kiindulasi, Cel)]
+
+# saveRDS(ProcData, "./data/ProcData.rds")
+
+yms <- unique(ProcData[, .(Year = lubridate::year(Datum),
+                           Month = lubridate::month(Datum))])
+
+for(i in 1:nrow(yms)) arrow::write_feather(ProcData[lubridate::year(Datum) == yms$Year[i] & lubridate::month(Datum) == yms$Month[i]],
+                                           paste0("./data/ProcData", yms$Year[i], sprintf("%02d", yms$Month[i]), ".feather"))
 
 RawData <- RawData[order(Datum, Vonat, VonatNev)]
 
@@ -211,7 +219,15 @@ RawData$VonatNev <- localefactor(RawData$VonatNev)
 RawData$VonatNevLabel <- localefactor(RawData$VonatNevLabel)
 RawData$VonatNem <- localefactor(RawData$VonatNem)
 
-saveRDS(RawData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Állomás, Menetrend.szerint, Menetrend.szerint.1, Tényleges, Tényleges.1, VonatNem)], "./data/RawData.rds")
+RawData <- RawData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Állomás, Menetrend.szerint, Menetrend.szerint.1, Tényleges, Tényleges.1, VonatNem)]
+
+# saveRDS(RawData, "./data/RawData.rds")
+
+yms <- unique(RawData[, .(Year = lubridate::year(Datum),
+                          Month = lubridate::month(Datum))])
+
+for(i in 1:nrow(yms)) arrow::write_feather(RawData[lubridate::year(Datum) == yms$Year[i] & lubridate::month(Datum) == yms$Month[i]],
+                                           paste0("./data/RawData", yms$Year[i], sprintf("%02d", yms$Month[i]), ".feather"))
 
 saveRDS(list(
   VonatNev = with(unique(ProcData[, .(VonatSzam, VonatNevLabel)])[order(VonatSzam)], setNames(VonatSzam, VonatNevLabel)),

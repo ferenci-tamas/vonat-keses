@@ -25,6 +25,7 @@ jobs:
             any::osmdata
             any::R.utils
             any::stringr
+            any::arrow
 
       - name: Checkout
         uses: actions/checkout@v5
@@ -42,9 +43,9 @@ jobs:
           git commit -m 'allomaskoord updated' || echo "No changes to commit"
           git add data/MetData.rds
           git commit -m 'MetData updated' || echo "No changes to commit"
-          git add data/ProcData.rds
+          git add data/ProcData*.rds
           git commit -m 'ProcData updated' || echo "No changes to commit"
-          git add data/RawData.rds
+          git add data/RawData*.rds
           git commit -m 'RawData updated' || echo "No changes to commit"
           git add data/choices.rds
           git commit -m 'choices updated' || echo "No changes to commit"

@@ -195,12 +195,13 @@ ProcData$Erkezo <- localefactor(ProcData$Erkezo)
 ProcData$Tipus <- localefactor(ProcData$Tipus)
 ProcData$VonatNem <- localefactor(ProcData$VonatNem)
 
-uvnl <- unique(ProcData$VonatNevLabel)
+patternKiindulasi <- ".*?\\((.*) -.*"
 patternCel <- ".*?\\(.*? - (.*)\\).*"
-patternIndulo <- ".*?\\((.*) -.*"
 
-ProcData <- ProcData[data.table(VonatNevLabel = uvnl, Kiindulasi = ifelse(grepl(patternIndulo, uvnl), sub(patternIndulo, "\\1", uvnl), NA_character_)), on = "VonatNevLabel"]
-ProcData <- ProcData[data.table(VonatNevLabel = uvnl, Cel = ifelse(grepl(patternCel, uvnl), sub(patternCel, "\\1", uvnl), NA_character_)), on = "VonatNevLabel"]
+ProcData$Kiindulasi <- ifelse(grepl(patternKiindulasi, ProcData$VonatNevLabel),
+                              sub(patternKiindulasi, "\\1", ProcData$VonatNevLabel), NA_character_)
+ProcData$Cel <- ifelse(grepl(patternCel, ProcData$VonatNevLabel),
+                       sub(patternCel, "\\1", ProcData$VonatNevLabel), NA_character_)
 
 saveRDS(ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem, Kiindulasi, Cel)], "./data/ProcData.rds")
 

@@ -43,8 +43,8 @@ options(highcharter.lang = hcoptslang)
 options(highcharter.download_map_data = FALSE)
 # source("hw_grid.R")
 
-ProcData <- readRDS("./data/ProcData.rds")
-RawData <- readRDS("./data/RawData.rds")
+ProcData <- rbindlist(lapply(list.files("./data/", "ProcData*", full.names = TRUE), arrow::read_feather))
+RawData <- rbindlist(lapply(list.files("./data/", "RawData*", full.names = TRUE), arrow::read_feather))
 allomaskoord <- readRDS("./data/allomaskoord.rds")
 # mapdata <- readRDS("mapdata.rds")
 mapdata <- jsonlite::read_json("./data/hu-all.topo.json")
@@ -296,7 +296,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.14"),
+                  .noWS = "outside"), ", v1.15"),
     
     tags$script(HTML("
       var sc_project=13147854;

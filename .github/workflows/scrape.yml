@@ -29,6 +29,7 @@ jobs:
             any::R.utils
             any::stringr
             any::arrow
+            any::lubridate
 
       - name: Checkout
         uses: actions/checkout@v5

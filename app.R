@@ -296,7 +296,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.13"),
+                  .noWS = "outside"), ", v1.14"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -493,6 +493,34 @@ server <- function(input, output, session) {
                   optionSelectedText = "állomás kiválasztva",
                   optionsSelectedText = "állomás kiválasztva")
               ),
+              radioButtons("statKiindulasi", "Vonat kiindulási állomása",
+                           c("Összes egyben", "Lebontás", "Kiválasztott")),
+              conditionalPanel(
+                "input.statKiindulasi == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "statKiindulasiSel", "Kiválasztott vasútállomás",
+                  choices$AllomasKiindulasi, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
+              radioButtons("statCel", "Vonat célállomása",
+                           c("Összes egyben", "Lebontás", "Kiválasztott")),
+              conditionalPanel(
+                "input.statCel == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "statCelSel", "Kiválasztott vasútállomás",
+                  choices$AllomasKiindulasi, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
               radioButtons(
                 "statVonatSzam",
                 div("Vonat",
@@ -557,6 +585,34 @@ server <- function(input, output, session) {
                   shinyWidgets::virtualSelectInput(
                     "trendStationSel", "Kiválasztott vasútállomás",
                     choices$AllomasErkezo, "Budapest-Keleti",
+                    multiple = TRUE, search = TRUE,
+                    placeholder = "Válasszon",
+                    allOptionsSelectedText = "Mindegyik",
+                    searchPlaceholderText = "Keresés",
+                    optionSelectedText = "állomás kiválasztva",
+                    optionsSelectedText = "állomás kiválasztva")
+                ),
+                radioButtons("trendKiindulasi", "Vonat kiindulási állomása",
+                             c("Összes egyben", "Kiválasztott")),
+                conditionalPanel(
+                  "input.trendKiindulasi == 'Kiválasztott'",
+                  shinyWidgets::virtualSelectInput(
+                    "trendKiindulasiSel", "Kiválasztott vasútállomás",
+                    choices$AllomasKiindulasi, "Budapest-Keleti",
+                    multiple = TRUE, search = TRUE,
+                    placeholder = "Válasszon",
+                    allOptionsSelectedText = "Mindegyik",
+                    searchPlaceholderText = "Keresés",
+                    optionSelectedText = "állomás kiválasztva",
+                    optionsSelectedText = "állomás kiválasztva")
+                ),
+                radioButtons("trendCel", "Vonat célállomása",
+                             c("Összes egyben", "Kiválasztott")),
+                conditionalPanel(
+                  "input.trendCel == 'Kiválasztott'",
+                  shinyWidgets::virtualSelectInput(
+                    "trendCelSel", "Kiválasztott vasútállomás",
+                    choices$AllomasKiindulasi, "Budapest-Keleti",
                     multiple = TRUE, search = TRUE,
                     placeholder = "Válasszon",
                     allOptionsSelectedText = "Mindegyik",
@@ -787,6 +843,34 @@ server <- function(input, output, session) {
                   optionSelectedText = "állomás kiválasztva",
                   optionsSelectedText = "állomás kiválasztva")
               ),
+              radioButtons("weekKiindulasi", "Vonat kiindulási állomása",
+                           c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.weekKiindulasi == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "weekKiindulasiSel", "Kiválasztott vasútállomás",
+                  choices$AllomasKiindulasi, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
+              radioButtons("weekCel", "Vonat célállomása",
+                           c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.weekCel == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "weekCelSel", "Kiválasztott vasútállomás",
+                  choices$AllomasKiindulasi, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
               radioButtons(
                 "weekVonatSzam",
                 div("Vonat",
@@ -906,12 +990,16 @@ server <- function(input, output, session) {
     daterange <- range(pd$Datum)
     if(input$statTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$statTraintypeSel]
     if(input$statStation == "Kiválasztott") pd <- pd[Erkezo %in% input$statStationSel]
+    if(input$statKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$statKiindulasiSel]
+    if(input$statCel == "Kiválasztott") pd <- pd[Cel %in% input$statCelSel]
     if(input$statVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$statVonatSzamSel]
     
     byvars <- character()
     if(input$timeTableStratTime == "Naponként") byvars <- c(byvars, c("Dátum" = "Datum"))
     if(input$statTraintype != "Összes egyben") byvars <- c(byvars, c("Vonatnem" = "VonatNem"))
     if(input$statStation != "Összes egyben") byvars <- c(byvars, c("Állomás" = "Erkezo"))
+    if(input$statKiindulasi != "Összes egyben") byvars <- c(byvars, c("Kiindulási állomás" = "Kiindulasi"))
+    if(input$statCel != "Összes egyben") byvars <- c(byvars, c("Célállomás" = "Cel"))
     if(input$statVonatSzam != "Összes egyben") byvars <- c(byvars, c("Vonat" = "VonatNevLabel"))
     
     pd <- pd[, kesesstat(KumKeses, c("N", input$statMetric)), byvars]
@@ -951,6 +1039,10 @@ server <- function(input, output, session) {
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
        input$trendStation == "Kiválasztott") pd <- pd[Erkezo %in% input$trendStationSel]
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
+       input$trendKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$trendKiindulasiSel]
+    if(input$trendMode %in% c("Megoszlások", "Idők") &&
+       input$trendCel == "Kiválasztott") pd <- pd[Cel %in% input$trendCelSel]
+    if(input$trendMode %in% c("Megoszlások", "Idők") &&
        input$trendVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$trendVonatSzamSel]
     
     metricsel <- if(input$trendMode == "Megoszlások") {
@@ -979,7 +1071,10 @@ server <- function(input, output, session) {
           if(input$trendTraintype == "Lebontás") keseshun(input$trendStatsFreqSingle) else "Késések időbeli trendjei",
           if(input$trendVonatSzam == "Kiválasztott") paste0(", ", paste0(names(choices$VonatNev[choices$VonatNev %in% input$trendVonatSzamSel]), collapse = ", ")) else "",
           if(input$trendTraintype == "Kiválasztott") paste0(", ", paste0(input$trendTraintypeSel, collapse = ", ")) else "",
-          if(input$trendStation == "Kiválasztott") paste0(", ", paste0(input$trendStationSel, collapse = ", ")) else ""))
+          if(input$trendStation == "Kiválasztott") paste0(", ", paste0(input$trendStationSel, collapse = ", "), " állomás") else "",
+          if(input$trendKiindulasi == "Kiválasztott") paste0(", ", paste0(input$trendKiindulasiSel, collapse = ", "), " kiindulási állomású vonatok") else "",
+          if(input$trendCel == "Kiválasztott") paste0(", ", paste0(input$trendCelSel, collapse = ", "), " célállomású vonatok") else ""
+        ))
     } else if(input$trendMode == "Idők") {
       p <- if(input$trendTraintype == "Lebontás")
         hchart(pd, "line", hcaes(x = Datum, y = value1, group = VonatNem)) else
@@ -993,7 +1088,10 @@ server <- function(input, output, session) {
           if(input$trendTraintype == "Lebontás") keseshun(input$trendStatsTimeSingle) else "Késések időbeli trendjei",
           if(input$trendVonatSzam == "Kiválasztott") paste0(", ", paste0(names(choices$VonatNev[choices$VonatNev %in% input$trendVonatSzamSel]), collapse = ", ")) else "",
           if(input$trendTraintype == "Kiválasztott") paste0(", ", paste0(input$trendTraintypeSel, collapse = ", ")) else "",
-          if(input$trendStation == "Kiválasztott") paste0(", ", paste0(input$trendStationSel, collapse = ", ")) else ""))
+          if(input$trendStation == "Kiválasztott") paste0(", ", paste0(input$trendStationSel, collapse = ", ")) else "",
+          if(input$trendKiindulasi == "Kiválasztott") paste0(", ", paste0(input$trendKiindulasiSel, collapse = ", "), " kiindulási állomású vonatok") else "",
+          if(input$trendCel == "Kiválasztott") paste0(", ", paste0(input$trendCelSel, collapse = ", "), " célállomású vonatok") else ""
+        ))
       
       if(input$trendLog) p <- p |> hc_yAxis(type = "logarithmic")
     } else if(input$trendMode == "Összetétel (diszkrét)") {
@@ -1147,8 +1245,8 @@ server <- function(input, output, session) {
     pd <- if(input$databaseMode == "Nyers adatok") RawData else ProcData
     pd <- if(length(input$databaseDate) == 2)
       pd[Datum >= input$databaseDate[1] &
-                 Datum <= input$databaseDate[2]] else
-                   pd[Datum == input$databaseDate]
+           Datum <= input$databaseDate[2]] else
+             pd[Datum == input$databaseDate]
     pd <- pd[VonatSzam %in% input$databaseVonat]
     pd <- pd[VonatNem %in% input$databaseVonatNem]
     
@@ -1200,6 +1298,8 @@ server <- function(input, output, session) {
     
     if(input$weekTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$weekTraintypeSel]
     if(input$weekStation == "Kiválasztott") pd <- pd[Erkezo %in% input$weekStationSel]
+    if(input$weekKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$weekKiindulasiSel]
+    if(input$weekCel == "Kiválasztott") pd <- pd[Cel %in% input$weekCelSel]
     if(input$weekVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$weekVonatSzamSel]
     
     pd$day <- lubridate::wday(pd$Datum, label = TRUE,
@@ -1229,7 +1329,10 @@ server <- function(input, output, session) {
         keseshun(input$weekMetric),
         if(input$weekVonatSzam == "Kiválasztott") paste0(", ", paste0(names(choices$VonatNev[choices$VonatNev %in% input$weekVonatSzamSel]), collapse = ", ")) else "",
         if(input$weekTraintype == "Kiválasztott") paste0(", ", paste0(input$weekTraintypeSel, collapse = ", ")) else "",
-        if(input$weekStation == "Kiválasztott") paste0(", ", paste0(input$weekStationSel, collapse = ", ")) else "")) |>
+        if(input$weekStation == "Kiválasztott") paste0(", ", paste0(input$weekStationSel, collapse = ", "), " állomás") else "",
+        if(input$weekKiindulasi == "Kiválasztott") paste0(", ", paste0(input$weekKiindulasiSel, collapse = ", "), " kiindulási állomású vonatok") else "",
+        if(input$weekCel == "Kiválasztott") paste0(", ", paste0(input$weekCelSel, collapse = ", "), " célállomású vonatok") else ""
+      )) |>
       hc_xAxis(title = list(text = "Hét napja"), allowDecimals = FALSE) |>
       hc_legend(title = list(text = "Hét")) |>
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>

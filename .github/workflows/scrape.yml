@@ -50,9 +50,9 @@ jobs:
           git commit -m 'allomaskoord updated' || echo "No changes to commit"
           git add data/MetData.rds
           git commit -m 'MetData updated' || echo "No changes to commit"
-          git add data/ProcData*.rds
+          git add data/ProcData*.feather
           git commit -m 'ProcData updated' || echo "No changes to commit"
-          git add data/RawData*.rds
+          git add data/RawData*.feather
           git commit -m 'RawData updated' || echo "No changes to commit"
           git add data/choices.rds
           git commit -m 'choices updated' || echo "No changes to commit"

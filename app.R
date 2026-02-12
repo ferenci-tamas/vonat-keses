@@ -43,8 +43,14 @@ options(highcharter.lang = hcoptslang)
 options(highcharter.download_map_data = FALSE)
 # source("hw_grid.R")
 
-ProcData <- rbindlist(lapply(list.files("./data/", "ProcData*", full.names = TRUE), arrow::read_feather))
-RawData <- rbindlist(lapply(list.files("./data/", "RawData*", full.names = TRUE), arrow::read_feather))
+ProcData <- arrow::open_dataset(list.files("./data/", "ProcData*", full.names = TRUE), format = "feather")
+RawData <- arrow::open_dataset(list.files("./data/", "RawData*", full.names = TRUE), format = "feather")
+
+mindate <- ProcData |> dplyr::summarise(min(Datum)) |> dplyr::collect() |>
+  dplyr::pull()
+maxdate <- ProcData |> dplyr::summarise(max(Datum)) |> dplyr::collect() |>
+  dplyr::pull()
+
 allomaskoord <- readRDS("./data/allomaskoord.rds")
 # mapdata <- readRDS("mapdata.rds")
 mapdata <- jsonlite::read_json("./data/hu-all.topo.json")
@@ -296,7 +302,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.15"),
+                  .noWS = "outside"), ", v1.16"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -460,9 +466,9 @@ server <- function(input, output, session) {
                 "input.timeTime == 'Egyéni nap vagy intervallum'",
                 shinyWidgets::airDatepickerInput(
                   "timeTableCustomDate", "Dátum vagy intervallum",
-                  c(max(ProcData$Datum) - 7, max(ProcData$Datum)),
-                  range = TRUE, minDate = min(ProcData$Datum),
-                  maxDate = max(ProcData$Datum))),
+                  c(maxdate - 7, maxdate),
+                  range = TRUE, minDate = mindate,
+                  maxDate = maxdate)),
               radioButtons("timeTableStratTime", "Megjelenítés módja",
                            c("Naponként", "Egyben")),
               radioButtons("statTraintype", "Vonatnem",
@@ -712,8 +718,8 @@ server <- function(input, output, session) {
                                 "A csúszka két végét ugyanoda húzva egyetlen nap választható ki.",
                                 placement = "left"
                               )),
-                          min(ProcData$Datum), max(ProcData$Datum),
-                          c(max(ProcData$Datum) - 7, max(ProcData$Datum)), timeFormat = "%m. %d.", width = "100%"),
+                          mindate, maxdate,
+                          c(maxdate - 7, maxdate), timeFormat = "%m. %d.", width = "100%"),
               width = 10
             )
           )
@@ -733,9 +739,9 @@ server <- function(input, output, session) {
                              "Állomási késés", "Nyíltvonali késés")),
               shinyWidgets::airDatepickerInput(
                 "databaseDate", "Dátum",
-                c(max(ProcData$Datum) - 7, max(ProcData$Datum)),
-                minDate = min(ProcData$Datum),
-                maxDate = max(ProcData$Datum),
+                c(maxdate - 7, maxdate),
+                minDate = mindate,
+                maxDate = maxdate,
                 range = TRUE),
               shinyWidgets::virtualSelectInput(
                 "databaseVonatNem", "Vonatnem",
@@ -790,10 +796,10 @@ server <- function(input, output, session) {
                                 "Legfeljebb 14 nap választható az áttekinthetőség érdekében.",
                                 placement = "left"
                               )),
-                          min(ProcData$Datum),
-                          max(ProcData$Datum),
-                          c(max(ProcData$Datum) - 7,
-                            max(ProcData$Datum))),
+                          mindate,
+                          maxdate,
+                          c(maxdate - 7,
+                            maxdate)),
               radioButtons("distrMode",
                            "Megjelenítés módja",
                            c("Hisztogram", "Magfüggvényes sűrűségbecslés", "Boxplot")),
@@ -935,8 +941,8 @@ server <- function(input, output, session) {
                                   "A csúszka két végét ugyanoda húzva egyetlen nap választható ki.",
                                   placement = "left"
                                 )),
-                            min(ProcData$Datum), max(ProcData$Datum),
-                            c(max(ProcData$Datum) - 7, max(ProcData$Datum)), timeFormat = "%m. %d.", width = "100%")),
+                            mindate, maxdate,
+                            c(maxdate - 7, maxdate), timeFormat = "%m. %d.", width = "100%")),
               width = 10
             )
           )
@@ -963,9 +969,8 @@ server <- function(input, output, session) {
                                 bsicons::bs_icon("question-circle"),
                                 "A csúszka két végét ugyanoda húzva egyetlen nap választható ki.",
                                 placement = "left"
-                              )),
-                          min(ProcData$Datum), max(ProcData$Datum),
-                          c(min(ProcData$Datum), max(ProcData$Datum)), timeFormat = "%m. %d.", width = "100%"),
+                              )), mindate, maxdate, c(mindate, maxdate),
+                          timeFormat = "%m. %d.", width = "100%"),
               p("A meteorológiai adatok forrás: Meteostat, https://meteostat.net/"),
               width = 10
             )
@@ -979,20 +984,31 @@ server <- function(input, output, session) {
   )
   
   output$statOutput <- DT::renderDT({
-    pd <- ProcData[Tipus %in% c("Szakasz", "ZaroSzakasz")]
-    pd <- switch(input$timeTime,
-                 "Utolsó nap" = pd[Datum == max(pd$Datum)],
-                 "Utolsó hét" = pd[Datum >= max(pd$Datum) - 7],
-                 "Utolsó hónap" = pd[Datum >= max(pd$Datum) - 30],
-                 "Egyéni nap vagy intervallum" = pd[
-                   if(length(input$timeTableCustomDate) == 1) Datum == input$timeTableCustomDate else
-                     Datum >= input$timeTableCustomDate[1] & Datum <= input$timeTableCustomDate[2]])
-    daterange <- range(pd$Datum)
-    if(input$statTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$statTraintypeSel]
-    if(input$statStation == "Kiválasztott") pd <- pd[Erkezo %in% input$statStationSel]
-    if(input$statKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$statKiindulasiSel]
-    if(input$statCel == "Kiválasztott") pd <- pd[Cel %in% input$statCelSel]
-    if(input$statVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$statVonatSzamSel]
+    cutoff7 <- maxdate - 7
+    cutoff30 <- maxdate -30
+    
+    pd <- switch(
+      input$timeTime,
+      "Utolsó nap" = ProcData |> dplyr::filter(Datum == maxdate),
+      "Utolsó hét" = ProcData |> dplyr::filter(Datum >= cutoff7),
+      "Utolsó hónap" = ProcData |> dplyr::filter(Datum >= cutoff30),
+      "Egyéni nap vagy intervallum" = if(length(input$timeTableCustomDate) == 1)
+        ProcData |> dplyr::filter(Datum == input$timeTableCustomDate) else
+          ProcData |> dplyr::filter(Datum >= input$timeTableCustomDate[1] &
+                                      Datum <= input$timeTableCustomDate[2])
+    )
+    pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz"))
+    
+    daterange <- pd |> dplyr::summarise(min(Datum), max(Datum)) |>
+      dplyr::collect() |> unlist() |> unname() |> as.Date()
+    
+    if(input$statTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$statTraintypeSel)
+    if(input$statStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$statStationSel)
+    if(input$statKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$statKiindulasiSel)
+    if(input$statCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$statCelSel)
+    if(input$statVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$statVonatSzamSel)
+    
+    pd <- pd |> dplyr::arrange(Datum) |> as.data.table()
     
     byvars <- character()
     if(input$timeTableStratTime == "Naponként") byvars <- c(byvars, c("Dátum" = "Datum"))
@@ -1035,15 +1051,15 @@ server <- function(input, output, session) {
     pd <- ProcData
     
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
-       input$trendTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$trendTraintypeSel]
+       input$trendTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$trendTraintypeSel)
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
-       input$trendStation == "Kiválasztott") pd <- pd[Erkezo %in% input$trendStationSel]
+       input$trendStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$trendStationSel)
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
-       input$trendKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$trendKiindulasiSel]
+       input$trendKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$trendKiindulasiSel)
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
-       input$trendCel == "Kiválasztott") pd <- pd[Cel %in% input$trendCelSel]
+       input$trendCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$trendCelSel)
     if(input$trendMode %in% c("Megoszlások", "Idők") &&
-       input$trendVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$trendVonatSzamSel]
+       input$trendVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$trendVonatSzamSel)
     
     metricsel <- if(input$trendMode == "Megoszlások") {
       if(input$trendTraintype == "Lebontás") input$trendStatsFreqSingle else input$trendStatsFreq
@@ -1055,7 +1071,10 @@ server <- function(input, output, session) {
     byvars <- if(input$trendMode %in% c("Megoszlások", "Idők") &&
                  input$trendTraintype == "Lebontás") c("Datum", "VonatNem") else "Datum"
     
-    pd <- pd[Tipus %in% c("Szakasz", "ZaroSzakasz"), kesesstat(KumKeses, metricsel), byvars]
+    pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+      dplyr::arrange(Datum) |> as.data.table()
+    
+    pd <- pd[, kesesstat(KumKeses, metricsel), byvars]
     if(nrow(pd) == 0) return(NULL)
     
     if(input$trendMode == "Megoszlások") {
@@ -1115,15 +1134,16 @@ server <- function(input, output, session) {
   })
   
   output$spatialOutput <- renderHighchart({
-    pd <- ProcData[Datum >= input$spatialTimerange[1] &
-                     Datum <= input$spatialTimerange[2]]
+    pd <- ProcData |> dplyr::filter(Datum >= input$spatialTimerange[1] &
+                                      Datum <= input$spatialTimerange[2])
     
     p <- highchart(type = "map") |>
       hc_add_series(mapData = mapdata, showInLegend = FALSE)
     
     if(input$spatialMode == "Teljes késés") {
-      pd <- expandlatlon(pd[Tipus %in% c("Szakasz", "ZaroSzakasz"),
-                            kesesstat(KumKeses, input$spatialMetric),
+      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- expandlatlon(pd[, kesesstat(KumKeses, input$spatialMetric),
                             .(Erkezo)])
       p <- p |>
         hc_add_series(data = pd[, .(Erkezo, value1, lat = ErkezoLat,
@@ -1136,8 +1156,9 @@ server <- function(input, output, session) {
                      stops = colstops) |>
         hc_tooltip(headerFormat = "<b>{point.point.Erkezo}</b><br>")
     } else if(input$spatialMode == "Indulási késés") {
-      pd <- expandlatlon(pd[Tipus == "InduloAllomas",
-                            kesesstat(Keses, input$spatialMetric),
+      pd <- pd |> dplyr::filter(Tipus == "InduloAllomas") |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- expandlatlon(pd[, kesesstat(Keses, input$spatialMetric),
                             .(Indulo)])
       p <- p |>
         hc_add_series(data = pd[, .(Indulo, value1, lat = InduloLat,
@@ -1150,8 +1171,9 @@ server <- function(input, output, session) {
                      stops = colstops) |>
         hc_tooltip(headerFormat = "<b>{point.point.Indulo}</b><br>")
     } else if(input$spatialMode == "Állomási késés") {
-      pd <- expandlatlon(pd[Tipus == "KozbensoAllomas",
-                            kesesstat(Keses, input$spatialMetric),
+      pd <- pd |> dplyr::filter(Tipus == "KozbensoAllomas") |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- expandlatlon(pd[, kesesstat(Keses, input$spatialMetric),
                             .(Erkezo)])
       p <- p |>
         hc_add_series(data = pd[, .(Erkezo, value1, lat = ErkezoLat,
@@ -1164,8 +1186,9 @@ server <- function(input, output, session) {
                      stops = colstops) |>
         hc_tooltip(headerFormat = "<b>{point.point.Erkezo}</b><br>")
     } else if(input$spatialMode == "Nyíltvonali késés") {
-      pd <- expandlatlon(pd[Tipus %in% c("Szakasz", "ZaroSzakasz"),
-                            kesesstat(Keses, input$spatialMetric),
+      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- expandlatlon(pd[, kesesstat(Keses, input$spatialMetric),
                             .(Indulo, Erkezo)])
       dat <- lapply(1:nrow(pd), function(i) {
         list(
@@ -1212,9 +1235,11 @@ server <- function(input, output, session) {
   })
   
   output$distrOutput <- renderHighchart({
-    dat <- ProcData[Tipus %in% c("Szakasz", "ZaroSzakasz") & Datum >= input$distrDate[1] &
-                      Datum <= input$distrDate[2] & !is.na(KumKeses)]
-    if(input$distrLog) dat <- dat[KumKeses > 0]
+    dat <- ProcData |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz") & Datum >= input$distrDate[1] &
+                                       Datum <= input$distrDate[2] & !is.na(KumKeses))
+    if(input$distrLog) dat <- dat |> dplyr::filter(KumKeses > 0)
+    
+    dat <- dat |> dplyr::arrange(Datum) |> as.data.table()
     
     if(input$distrMode == "Hisztogram") {
       p <- hchart(hist(dat$KumKeses, breaks = 30, plot = FALSE)) |>
@@ -1244,14 +1269,15 @@ server <- function(input, output, session) {
   output$databaseOutput <- DT::renderDT({
     pd <- if(input$databaseMode == "Nyers adatok") RawData else ProcData
     pd <- if(length(input$databaseDate) == 2)
-      pd[Datum >= input$databaseDate[1] &
-           Datum <= input$databaseDate[2]] else
-             pd[Datum == input$databaseDate]
-    pd <- pd[VonatSzam %in% input$databaseVonat]
-    pd <- pd[VonatNem %in% input$databaseVonatNem]
+      pd |> dplyr::filter(Datum >= input$databaseDate[1] &
+                            Datum <= input$databaseDate[2]) else
+                              pd |> dplyr::filter(Datum == input$databaseDate)
+    pd <- pd |> dplyr::filter(VonatSzam %in% input$databaseVonat)
+    pd <- pd |> dplyr::filter(VonatNem %in% input$databaseVonatNem)
     
     if(input$databaseMode == "Nyers adatok") {
-      pd <- pd[Állomás %in% input$databaseAllomas]
+      pd <- pd |> dplyr::filter(Állomás %in% input$databaseAllomas) |>
+        dplyr::arrange(Datum) |> as.data.table()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
                    `Vonatnem` = VonatNem, Állomás,
                    `Menetrend szerinti érkezés` = Menetrend.szerint,
@@ -1259,31 +1285,35 @@ server <- function(input, output, session) {
                    `Menetrend szerinti indulás` = Menetrend.szerint.1,
                    `Tényleges indulás` = Tényleges.1)]
     } else if(input$databaseMode == "Nyíltvonali késés") {
-      pd <- pd[Indulo %in% input$databaseAllomas |
-                 Erkezo %in% input$databaseAllomas]
-      pd <- pd[Tipus %in% c("Szakasz", "ZaroSzakasz"),
-               .(`Dátum` = Datum, Vonat = VonatNev,
-                 `Vonatnem` = VonatNem,
-                 `Induló állomás` = Indulo,
-                 `Érkező állomás` = Erkezo, `Késés` = Keses)]
+      pd <- pd |> dplyr::filter(Indulo %in% input$databaseAllomas |
+                                  Erkezo %in% input$databaseAllomas) |>
+        dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
+                   `Vonatnem` = VonatNem,
+                   `Induló állomás` = Indulo,
+                   `Érkező állomás` = Erkezo, `Késés` = Keses)]
     } else if(input$databaseMode == "Indulási késés") {
-      pd <- pd[Indulo %in% input$databaseAllomas]
-      pd <- pd[Tipus == "InduloAllomas",
-               .(`Dátum` = Datum, Vonat = VonatNev,
-                 `Vonatnem` = VonatNem,
-                 `Állomás` = Indulo, `Késés` = Keses)]
+      pd <- pd |> dplyr::filter(Indulo %in% input$databaseAllomas) |>
+        dplyr::filter(Tipus == "InduloAllomas") |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
+                   `Vonatnem` = VonatNem,
+                   `Állomás` = Indulo, `Késés` = Keses)]
     } else if(input$databaseMode == "Teljes késés") {
-      pd <- pd[Erkezo %in% input$databaseAllomas]
-      pd <- pd[Tipus %in% c("Szakasz", "ZaroSzakasz"),
-               .(`Dátum` = Datum, Vonat = VonatNev,
-                 `Vonatnem` = VonatNem,
-                 `Állomás` = Erkezo, `Késés` = KumKeses)]
+      pd <- pd |> dplyr::filter(Erkezo %in% input$databaseAllomas) |>
+        dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
+                   `Vonatnem` = VonatNem,
+                   `Állomás` = Erkezo, `Késés` = KumKeses)]
     } else if(input$databaseMode == "Állomási késés") {
-      pd <- pd[Erkezo %in% input$databaseAllomas]
-      pd <- pd[Tipus == "KozbensoAllomas",
-               .(`Dátum` = Datum, Vonat = VonatNev,
-                 `Vonatnem` = VonatNem,
-                 `Állomás` = Erkezo, `Késés` = Keses)]
+      pd <- pd |> dplyr::filter(Erkezo %in% input$databaseAllomas) |>
+        dplyr::filter(Tipus == "KozbensoAllomas") |>
+        dplyr::arrange(Datum) |> as.data.table()
+      pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
+                   `Vonatnem` = VonatNem,
+                   `Állomás` = Erkezo, `Késés` = Keses)]
     }
     DT::datatable(pd, rownames = FALSE, #filter = "top",
                   extensions = "Buttons", selection = "single",
@@ -1296,11 +1326,14 @@ server <- function(input, output, session) {
   output$weekOutput <- renderHighchart({
     pd <- ProcData
     
-    if(input$weekTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$weekTraintypeSel]
-    if(input$weekStation == "Kiválasztott") pd <- pd[Erkezo %in% input$weekStationSel]
-    if(input$weekKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$weekKiindulasiSel]
-    if(input$weekCel == "Kiválasztott") pd <- pd[Cel %in% input$weekCelSel]
-    if(input$weekVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$weekVonatSzamSel]
+    if(input$weekTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$weekTraintypeSel)
+    if(input$weekStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$weekStationSel)
+    if(input$weekKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$weekKiindulasiSel)
+    if(input$weekCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$weekCelSel)
+    if(input$weekVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$weekVonatSzamSel)
+    
+    pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+      dplyr::arrange(Datum) |> as.data.table()
     
     pd$day <- lubridate::wday(pd$Datum, label = TRUE,
                               week_start = 1,
@@ -1308,7 +1341,7 @@ server <- function(input, output, session) {
     pd$yearweek <- paste0(lubridate::isoyear(pd$Datum), " - ",
                           lubridate::isoweek(pd$Datum))
     
-    pd <- pd[Tipus %in% c("Szakasz", "ZaroSzakasz"), kesesstat(KumKeses, input$weekMetric), .(yearweek, day)][order(yearweek, day)]
+    pd <- pd[, kesesstat(KumKeses, input$weekMetric), .(yearweek, day)][order(yearweek, day)]
     if(nrow(pd) == 0) return(NULL)
     
     p <- if(input$weekMetric %in% c(">5", ">20")) {
@@ -1343,12 +1376,25 @@ server <- function(input, output, session) {
   
   output$trafficOutput <- renderHighchart({
     if(input$trafficMode == "Időbeli trend") {
+      pd <- ProcData |> dplyr::filter(Datum != "2025-06-11")
+      
       pd <- rbind(
-        ProcData[Tipus == "InduloAllomas" & Indulo == input$trafficTrendAllomas, .(.N, Tipus = "Induló vonat"), .(Datum, Allomas = Indulo)],
-        ProcData[Tipus == "Szakasz" & Erkezo == input$trafficTrendAllomas, .(.N, Tipus = "Átmenő vonat"), .(Datum, Allomas = Erkezo)],
-        ProcData[Tipus == "ZaroSzakasz" & Erkezo == input$trafficTrendAllomas, .(.N, Tipus = "Érkező vonat"), .(Datum, Allomas = Erkezo)]
-      )
-      pd <- pd[Datum != "2025-06-11"]
+        pd |> dplyr::filter(Tipus == "InduloAllomas") |>
+          dplyr::filter(Indulo == input$trafficTrendAllomas) |>
+          dplyr::group_by(Datum, Allomas = Indulo) |>
+          dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Tipus = "Induló vonat") |> as.data.table(),
+        pd |> dplyr::filter(Tipus == "Szakasz") |> 
+          dplyr::filter(Erkezo == input$trafficTrendAllomas) |>
+          dplyr::group_by(Datum, Allomas = Erkezo) |>
+          dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Tipus = "Átmenő vonat") |> as.data.table(),
+        pd |> dplyr::filter(Tipus == "ZaroSzakasz") |>
+          dplyr::filter(Erkezo == input$trafficTrendAllomas) |>
+          dplyr::group_by(Datum, Allomas = Erkezo) |>
+          dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Tipus = "Érkező vonat") |> as.data.table()
+      )[order(Datum)]
       
       p <- hchart(pd, "line",
                   hcaes(x = Datum, y = N, group = Tipus)) |>
@@ -1361,14 +1407,23 @@ server <- function(input, output, session) {
         hc_credits(enabled = TRUE) |>
         hc_exporting(enabled = TRUE)
     } else if(input$trafficMode == "Térkép") {
-      pd <- ProcData[Datum >= input$trafficMapDate[1] &
-                       Datum <= input$trafficMapDate[2]]
+      pd <- ProcData |> dplyr::filter(Datum >= input$trafficMapDate[1] &
+                                        Datum <= input$trafficMapDate[2])
       pd <- switch(
         input$trafficMapType,
-        "Induló vonat" = pd[Tipus == "InduloAllomas", .(.N, Tipus = "Induló vonat"), .(Allomas = Indulo)],
-        "Átmenő vonat" = pd[Tipus == "Szakasz", .(.N, Tipus = "Átmenő vonat"), .(Allomas = Erkezo)],
-        "Érkező vonat" = pd[Tipus == "ZaroSzakasz", .(.N, Tipus = "Érkező vonat"), .(Allomas = Erkezo)]
+        "Induló vonat" = pd |> dplyr::filter(Tipus == "InduloAllomas") |> 
+          dplyr::group_by(Allomas = Indulo) |> dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Tipus = "Induló vonat") |> as.data.table(),
+        "Átmenő vonat" = pd |> dplyr::filter(Tipus == "Szakasz") |> 
+          dplyr::group_by(Allomas = Erkezo) |> dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Tipus = "Átmenő vonat") |> as.data.table(),
+        "Érkező vonat" = pd |> dplyr::filter(Tipus == "ZaroSzakasz") |> 
+          dplyr::group_by(Allomas = Erkezo) |> dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Tipus = "Érkező vonat") |> as.data.table()
       )
+      
+      pd <- pd |> as.data.table()
+      
       pd <- expandlatlon(pd)
       
       p <- highchart(type = "map") |>
@@ -1401,11 +1456,11 @@ server <- function(input, output, session) {
   })
   
   output$corrOutput <- renderHighchart({
-    pd <- ProcData[Tipus %in% c("Szakasz", "ZaroSzakasz") &
+    pd <- ProcData |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz") &
                      Datum >= input$corrDate[1] &
-                     Datum <= input$corrDate[2],
-                   kesesstat(KumKeses, input$corrMetric),
-                   .(Datum)]
+                     Datum <= input$corrDate[2]) |> as.data.table()
+    
+    pd <- pd[, kesesstat(KumKeses, input$corrMetric), .(Datum)]
     pd <- merge(pd, MetData, by = "Datum")
     pd$variable <- pd[[input$corrVariable]]
     p <- hchart(pd, "point", hcaes(x = variable, y = value1)) |>

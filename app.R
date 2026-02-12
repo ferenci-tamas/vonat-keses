@@ -302,7 +302,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.16"),
+                  .noWS = "outside"), ", v1.17"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -466,9 +466,8 @@ server <- function(input, output, session) {
                 "input.timeTime == 'Egyéni nap vagy intervallum'",
                 shinyWidgets::airDatepickerInput(
                   "timeTableCustomDate", "Dátum vagy intervallum",
-                  c(maxdate - 7, maxdate),
-                  range = TRUE, minDate = mindate,
-                  maxDate = maxdate)),
+                  c(maxdate - 7, maxdate), range = TRUE, minDate = mindate,
+                  maxDate = maxdate, firstDay = 1)),
               radioButtons("timeTableStratTime", "Megjelenítés módja",
                            c("Naponként", "Egyben")),
               radioButtons("statTraintype", "Vonatnem",
@@ -737,12 +736,9 @@ server <- function(input, output, session) {
                                )),
                            c("Nyers adatok", "Teljes késés", "Indulási késés",
                              "Állomási késés", "Nyíltvonali késés")),
-              shinyWidgets::airDatepickerInput(
-                "databaseDate", "Dátum",
-                c(maxdate - 7, maxdate),
-                minDate = mindate,
-                maxDate = maxdate,
-                range = TRUE),
+              shinyWidgets::airDatepickerInput("databaseDate", "Dátum",
+                c(maxdate - 7, maxdate), minDate = mindate, maxDate = maxdate,
+                range = TRUE, firstDay = 1),
               shinyWidgets::virtualSelectInput(
                 "databaseVonatNem", "Vonatnem",
                 choices$VonatNem, choices$VonatNem,

@@ -3,7 +3,7 @@ library(data.table)
 ##### ProcData #####
 
 RawData <- rbindlist(lapply(
-  list.files("./data/raw/", full.names = TRUE), function(f)
+  list.files("./data/raw/", paste0("raw", format(Sys.Date(), "%Y%m"), ".*"), full.names = TRUE), function(f)
     rbindlist(readRDS(f), use.names = TRUE, fill = TRUE)),
   use.names = TRUE, fill = TRUE)
 
@@ -44,10 +44,12 @@ RawData[Tényleges.1.num - Tényleges.num < 0 & Tényleges.1.num - Tényleges.nu
 stopifnot(!any(RawData[, .(sum(is.na(Vonat)), sum(!is.na(Vonat))), .(Datum)][, !xor(V1, V2)])) # vagy minden Vonat ki van töltve vagy egy sem egy nap
 # amelyik nap nincs, azt kitöltjük
 
-RawData <- merge(RawData, unique(RawData[, .(Datum, VonatSzam)])[, .(VonatSzam, Vonat = 1:.N) , .(Datum)], by = c("Datum", "VonatSzam"))
-RawData$Vonat <- ifelse(is.na(RawData$Vonat.x), RawData$Vonat.y, RawData$Vonat.x)
-RawData$Vonat.x <- NULL
-RawData$Vonat.y <- NULL
+# Ez csak ott kell, ahol unique(RawData[is.na(Vonat)]$Datum) van,
+# ez 2025 közepén pár nap
+# RawData <- merge(RawData, unique(RawData[, .(Datum, VonatSzam)])[, .(VonatSzam, Vonat = 1:.N) , .(Datum)], by = c("Datum", "VonatSzam"))
+# RawData$Vonat <- ifelse(is.na(RawData$Vonat.x), RawData$Vonat.y, RawData$Vonat.x)
+# RawData$Vonat.x <- NULL
+# RawData$Vonat.y <- NULL
 
 stopifnot(nrow(RawData[, .N, .(Datum, Vonat, Állomás)][N > 1]) == 0)
 
@@ -71,20 +73,25 @@ RawData$VonatSzam <- as.numeric(sapply(strsplit(RawData$VonatNev, " "), `[[`, 1)
 
 RawData$VonatNev <- trimws(gsub("[\\s\\h]+", " ", RawData$VonatNev, perl = TRUE))
 
-for(remstr in paste0(", 2025.06.", 11:20, "."))
-  RawData$VonatNev <- gsub(remstr, "", RawData$VonatNev)
+# Ez csak 2025-06-11 és 2025-06-20 között kell
+# for(remstr in paste0(", 2025.06.", 11:20, "."))
+#   RawData$VonatNev <- gsub(remstr, "", RawData$VonatNev)
 
-temp <- unlist(strsplit(unique(RawData$VonatNev), " "))
+# Ez csak 2025-06-11 és 2025-06-20 között kell
+# temp <- unlist(strsplit(unique(RawData$VonatNev), " "))
+# for(remstr in c(unique(paste0(temp[grep("^S\\d+$", temp)], " ")),
+#                 unique(paste0(temp[grep("^Z\\d+$", temp)], " ")),
+#                 unique(paste0(temp[grep("^G\\d+$", temp)], " ")),
+#                 unique(paste0(temp[grep("^IR\\d+$", temp)], " "))))
+#   RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20",
+#           VonatNev := gsub(remstr, "", VonatNev)]
 
-for(remstr in c(unique(paste0(temp[grep("^S\\d+$", temp)], " ")),
-                unique(paste0(temp[grep("^Z\\d+$", temp)], " ")),
-                unique(paste0(temp[grep("^G\\d+$", temp)], " ")),
-                unique(paste0(temp[grep("^IR\\d+$", temp)], " "))))
-  RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20",
-          VonatNev := gsub(remstr, "", VonatNev)]
 RawData[, VonatNev := gsub("TramTrain 1", "TramTrain", VonatNev)]
 
-RawData <- merge(RawData, RawData[, .(VonatNevLabel = names(sort(table(VonatNev), decreasing = TRUE))[1]) , .(VonatSzam)], by = "VonatSzam", sort = FALSE)
+RawData <- merge(RawData,
+                 rbindlist(lapply(list.files("./data/", "RawData*", full.names = TRUE), arrow::read_feather))[
+                   , .(VonatNevLabel = names(sort(table(VonatNev), decreasing = TRUE))[1]), .(VonatSzam)],
+                 by = "VonatSzam", sort = FALSE)
 
 qgrepl <- function(x) grepl(x, RawData$VonatNevLabel, ignore.case = TRUE)
 
@@ -180,8 +187,10 @@ ProcData[, Nominalis := fifelse(Nominalis < -720, Nominalis + 1440, Nominalis)]
 ProcData[, KumNominalis := fifelse(KumNominalis < -720, KumNominalis + 1440, KumNominalis)]
 ProcData[, Tenyleges := fifelse(Tenyleges < -720, Tenyleges + 1440, Tenyleges)]
 ProcData[, KumTenyleges := fifelse(KumTenyleges < -720, KumTenyleges + 1440, KumTenyleges)]
-ProcData[Datum == "2025-07-07" & VonatNev %in% c("568 TOKAJ InterCity", "16706 ARANYPART Expresszvonat"),
-         KumTenyleges := fifelse(KumTenyleges < -600, KumTenyleges + 1440, KumTenyleges)]
+
+# Ez csak 2025-07-07-én kell
+# ProcData[Datum == "2025-07-07" & VonatNev %in% c("568 TOKAJ InterCity", "16706 ARANYPART Expresszvonat"),
+#          KumTenyleges := fifelse(KumTenyleges < -600, KumTenyleges + 1440, KumTenyleges)]
 
 ProcData$Keses <- ProcData$Tenyleges - ProcData$Nominalis
 ProcData$KumKeses <- ProcData$KumTenyleges - ProcData$KumNominalis

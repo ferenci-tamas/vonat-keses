@@ -22,10 +22,10 @@ stopifnot(length(which(is.na(as.numeric(RawData$Km)))) == 0)
 RawData$Km <- as.numeric(RawData$Km)
 
 alkalmas <- function(x) {
-  length(setdiff(unique(nchar(RawData$Menetrend.szerint)), c(NA, 5))) == 0 &&
-    length(setdiff(unique(substring(RawData$Menetrend.szerint, 3, 3)), c(NA, ":"))) == 0 &&
-    !any(is.na(as.numeric(substring(RawData$Menetrend.szerint, 1, 2))) & !is.na(RawData$Menetrend.szerint)) &&
-    !any(is.na(as.numeric(substring(RawData$Menetrend.szerint, 4, 5))) & !is.na(RawData$Menetrend.szerint))
+  length(setdiff(unique(nchar(x)), c(NA, 5))) == 0 &&
+    length(setdiff(unique(substring(x, 3, 3)), c(NA, ":"))) == 0 &&
+    !any(is.na(as.numeric(substring(x, 1, 2))) & !is.na(x)) &&
+    !any(is.na(as.numeric(substring(x, 4, 5))) & !is.na(x))
 }
 
 stopifnot(alkalmas(RawData$Menetrend.szerint))

@@ -1,4 +1,5 @@
 library(data.table)
+source("utils.R")
 
 ##### ProcData #####
 
@@ -248,6 +249,28 @@ saveRDS(list(
   AllomasCel = sort(unique(ProcData$Cel))
 ), "./data/choices.rds")
 
+##### Előre aggregált trend adatok #####
+
+ProcDataAll <- arrow::open_dataset(
+  list.files("./data/", "ProcData", full.names = TRUE),
+  format = "feather"
+)
+
+trendBase <- ProcDataAll |>
+  dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+  dplyr::collect() |>
+  setDT()
+
+allMetrics <- c("N", "Megoszlás", ">5", ">20", "Átlag", "Medián",
+                "75. percentilis", "90. percentilis", "99. percentilis", "Maximum")
+
+TrendAgg <- list(
+  all        = trendBase[, kesesstat(KumKeses, allMetrics), .(Datum)][order(Datum)],
+  byVonatNem = trendBase[, kesesstat(KumKeses, allMetrics), .(Datum, VonatNem)][order(Datum, VonatNem)]
+)
+
+saveRDS(TrendAgg, "./data/TrendAgg.rds")
+
 ##### Állomás #####
 
 allomaskoord <- tryCatch(as.data.table(osmdata::osmdata_data_frame(paste0(
@@ -280,3 +303,31 @@ if(!is.null(MetData)) {
   MetData$Datum <- as.Date(paste0(MetData$year, "-", MetData$month, "-", MetData$day))
   saveRDS(MetData, "./data/MetData.rds")
 }
+
+##### Térkép #####
+
+md <- highcharter::download_map_data("countries/hu/hu-all")
+sf_map <- sf::read_sf(jsonlite::toJSON(md, auto_unbox = TRUE), quiet = TRUE)
+
+county_rows <- which(sf_map$type != "Megyei jogu város")
+city_rows   <- which(sf_map$type == "Megyei jogu város")
+sf_result   <- sf_map[county_rows, ]
+
+for (i in seq_len(nrow(sf_result))) {
+  if (sf_result$type[i] == "Fovaros") next
+  city_matches <- city_rows[sf_map$subregion[city_rows] == sf_result$name[i]]
+  if (length(city_matches) == 0) next
+  sf::st_geometry(sf_result)[i] <- sf::st_union(
+    sf::st_geometry(rbind(sf_result[i, ], sf_map[city_matches, ]))
+  )
+}
+
+tmp <- tempfile(fileext = ".geojson")
+sf::st_write(sf_result, tmp, driver = "GeoJSON", quiet = TRUE, delete_dsn = TRUE)
+dissolved <- jsonlite::read_json(tmp)
+for (i in seq_along(dissolved$features))
+  dissolved$features[[i]]$properties <- md$features[[county_rows[i]]]$properties
+
+result <- md
+result$features <- dissolved$features
+saveRDS(result, "./data/mapdata.rds")

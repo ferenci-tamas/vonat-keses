@@ -1,0 +1,1 @@
+print(rvest::html_encoding_guess(httr::content(httr::GET("https://elvira.mav-start.hu/"), as = "raw")))

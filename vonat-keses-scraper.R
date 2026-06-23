@@ -3,7 +3,7 @@ library(data.table)
 print(Sys.Date())
 print(Sys.time())
 
-EDszam <- rvest::read_html("https://elvira.mav-start.hu/")
+EDszam <- rvest::read_html("https://elvira.mav-start.hu/", encoding = "ISO-8859-1")
 EDszam <- rvest::html_text(rvest::html_nodes(EDszam, "script"))
 EDszam <- sapply(EDszam, function(s)
   sub("ed:'([0-9A-F]+)'", "\\1",
@@ -18,7 +18,7 @@ maxv <- 1000
 for(d in c(1000, 100, 10, 1)) {
   repeat {
     tab <- rvest::html_table(rvest::read_html(paste0(
-      elviraurl, maxv, "&d=", datum, "&ed=", EDszam)))
+      elviraurl, maxv, "&d=", datum, "&ed=", EDszam), encoding = "ISO-8859-1"))
     if(length(tab) == 0) break
     maxv <- maxv + d
   }
@@ -39,7 +39,7 @@ res <- lapply(1:maxv, function(v) {
   pb$tick()
   tryCatch({
     pg <- purrr::insistently(function() rvest::read_html(paste0(
-      elviraurl, v, "&d=", datum, "&ed=", EDszam)),
+      elviraurl, v, "&d=", datum, "&ed=", EDszam), encoding = "ISO-8859-1"),
       rate = purrr::rate_delay(pause = 2, max_times = 10))()
     tab <- rvest::html_table(pg, header = FALSE)[[1]]
     tab <- if(tab$X1[3] == "Km") tab[-c(1, 3),] else tab[-2,]

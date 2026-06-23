@@ -25,4 +25,4 @@ jobs:
         uses: actions/checkout@v5
         
       - name: Debug
-        run: Rscript -e 'rvest::read_html("https://elvira.mav-start.hu/", encoding = "ISO-8859-1")'
+        run: Rscript -e 'source("debug.R")'

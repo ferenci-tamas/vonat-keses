@@ -22,4 +22,4 @@ jobs:
             any::httr
         
       - name: Debug
-        run: Rscript -e 'print(cat(httr::content(httr::GET("https://elvira.mav-start.hu/"), as = "text")))'
+        run: Rscript -e 'rvest::read_html("https://elvira.mav-start.hu/", encoding = "ISO-8859-1")'

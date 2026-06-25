@@ -189,14 +189,14 @@ ui <- navbarPage(
         color: #e2e2e2;
       }
       
-      .share-btn.twitter     { background: #55acee; }
+      .share-btn.twitter     { background: #000000; }
       .share-btn.google-plus { background: #dd4b39; }
       .share-btn.facebook    { background: #3B5998; }
       .share-btn.stumbleupon { background: #EB4823; }
       .share-btn.reddit      { background: #ff5700; }
       .share-btn.hackernews  { background: #ff6600; }
       .share-btn.linkedin    { background: #4875B4; }
-      .share-btn.email       { background: #444444; }"
+      .share-btn.email       { background: #c0392b; }"
       ))
     ),
     
@@ -247,7 +247,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.24"),
+                  .noWS = "outside"), ", v1.25"),
     
     tags$script(HTML("
       var sc_project=13147854;

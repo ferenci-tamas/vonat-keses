@@ -207,6 +207,20 @@ ui <- navbarPage(
   footer = list(
     tags$script(HTML("
       $(function() {
+        // Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
+        document.querySelectorAll('.navbar-nav .dropdown-menu').forEach(function(menu) {
+          menu.setAttribute('role', 'menu');
+          menu.querySelectorAll('li').forEach(function(li) {
+            li.setAttribute('role', 'presentation');
+          });
+          menu.querySelectorAll('a.dropdown-item, button.dropdown-item').forEach(function(item) {
+            item.setAttribute('role', 'menuitem');
+          });
+        });
+        document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(toggle) {
+          toggle.setAttribute('aria-haspopup', 'menu');
+        });
+
         function closeNavbarDropdowns() {
           document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(el) {
             try { bootstrap.Dropdown.getOrCreateInstance(el).hide(); } catch(e) {}
@@ -233,7 +247,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.23"),
+                  .noWS = "outside"), ", v1.24"),
     
     tags$script(HTML("
       var sc_project=13147854;

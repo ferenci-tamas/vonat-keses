@@ -250,7 +250,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.30"),
+                  .noWS = "outside"), ", v1.31"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -1027,12 +1027,29 @@ server <- function(input, output, session) {
         hc_legend(title = list(text = "Késési idő [perc]"))
     }
     
+    if(input$trendMode %in% c("Megoszlások", "Idők"))
+      p <- p|> hc_navigator(enabled = TRUE, yAxis = list(title = list(text = "")),
+                            series = list(type = "line"),
+                            xAxis = list(dateTimeLabelFormats = list(
+                              day   = "%Y. %m. %d.",
+                              week  = "%Y. %m. %d.",
+                              month = "%Y. %m.",
+                              year  = "%Y."
+                            )))
+    
     p |>
-      hc_xAxis(title = list(text = "Dátum")) |>
+      hc_xAxis(type = "datetime", title = list(text = "Dátum"),
+               dateTimeLabelFormats = list(
+                 day   = "%Y. %m. %d.",
+                 week  = "%Y. %m. %d.",
+                 month = "%Y. %m.",
+                 year  = "%Y."
+               )) |>
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE)
+      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900,
+                   chartOptions = list(navigator = list(enabled = FALSE)))
   })
   
   output$spatialOutput <- renderHighchart({
@@ -1134,7 +1151,7 @@ server <- function(input, output, session) {
                                paste0(range(input$spatialTimerange), collapse = " - "))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE)
+      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
   })
   
   output$distrOutput <- renderHighchart({
@@ -1166,7 +1183,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE)
+      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
   })
   
   output$databaseOutput <- DT::renderDT({
@@ -1284,7 +1301,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE)
+      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
   })
   
   output$trafficOutput <- renderHighchart({
@@ -1315,13 +1332,28 @@ server <- function(input, output, session) {
       p <- hchart(pd, "line",
                   hcaes(x = Datum, y = N, group = Tipus)) |>
         hc_title(text = paste0(input$trafficTrendAllomas, " állomás forgalma")) |>
-        hc_xAxis(title = list(text = "Dátum")) |>
+        hc_xAxis(type = "datetime", title = list(text = "Dátum"),
+                 dateTimeLabelFormats = list(
+                   day   = "%Y. %m. %d.",
+                   week  = "%Y. %m. %d.",
+                   month = "%Y. %m.",
+                   year  = "%Y."
+                 )) |>
+        hc_navigator(enabled = TRUE, yAxis = list(title = list(text = "")),
+                     series = list(type = "line"),
+                     xAxis = list(dateTimeLabelFormats = list(
+                       day   = "%Y. %m. %d.",
+                       week  = "%Y. %m. %d.",
+                       month = "%Y. %m.",
+                       year  = "%Y."
+                     ))) |>
         hc_yAxis(title = list(text = "Vonatok száma [db]"), allowDecimals = FALSE) |>
         hc_tooltip(valueDecimals = 0, valueSuffix = " db") |>
         hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
         hc_caption(text = figcap) |>
         hc_credits(enabled = TRUE) |>
-        hc_exporting(enabled = TRUE)
+        hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900,
+                     chartOptions = list(navigator = list(enabled = FALSE)))
     } else if(input$trafficMode == "Térkép") {
       pd <- ProcData |> dplyr::filter(Datum >= input$trafficMapDate[1] &
                                         Datum <= input$trafficMapDate[2])
@@ -1368,7 +1400,7 @@ server <- function(input, output, session) {
                                  paste0(range(input$trafficMapDate), collapse = " - "))) |>
         hc_caption(text = figcap) |>
         hc_credits(enabled = TRUE) |>
-        hc_exporting(enabled = TRUE)
+        hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
     }
     
     p
@@ -1406,7 +1438,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE)
+      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
     p
   })
 }

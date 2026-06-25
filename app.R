@@ -209,24 +209,16 @@ ui <- navbarPage(
       $(function() {
         // Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
         function fixNavbarAria() {
-          // Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
+
           var main = document.querySelector('.tab-content');
           if (main && !main.getAttribute('role')) main.setAttribute('role', 'main');
 
           document.querySelectorAll('.navbar-nav > li.dropdown').forEach(function(li) {
             li.setAttribute('role', 'presentation');
           });
-          document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(a) {
+          document.querySelectorAll('.navbar-nav > li.dropdown > .dropdown-toggle').forEach(function(a) {
             a.setAttribute('role', 'tab');
-            a.setAttribute('aria-haspopup', 'menu');
-          });
-          document.querySelectorAll('.navbar-nav .dropdown-menu').forEach(function(menu) {
-            menu.setAttribute('role', 'menu');
-            menu.querySelectorAll(':scope > li').forEach(function(li) {
-              li.setAttribute('role', 'presentation');
-              var item = li.querySelector('a, button');
-              if (item) item.setAttribute('role', 'menuitem');
-            });
+            a.setAttribute('aria-haspopup', 'true');
           });
         }
         fixNavbarAria();
@@ -258,7 +250,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.29"),
+                  .noWS = "outside"), ", v1.30"),
     
     tags$script(HTML("
       var sc_project=13147854;

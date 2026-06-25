@@ -205,9 +205,35 @@ ui <- navbarPage(
         target = "_blank"), "olvashatóak el.")
   ),
   footer = list(
+    tags$script(HTML("
+      $(function() {
+        function closeNavbarDropdowns() {
+          document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(el) {
+            try { bootstrap.Dropdown.getOrCreateInstance(el).hide(); } catch(e) {}
+            el.setAttribute('aria-expanded', 'false');
+            el.classList.remove('show');
+            var parent = el.closest('.dropdown');
+            if (parent) {
+              parent.classList.remove('show');
+              var menu = parent.querySelector('.dropdown-menu');
+              if (menu) menu.classList.remove('show');
+            }
+          });
+        }
+
+        $(document).on('click',
+          '#gotoDatabase, #gotoDistr, #gotoWeek, #gotoTraffic, #gotoCorr',
+          function() { setTimeout(closeNavbarDropdowns, 600); }
+        );
+
+        Shiny.addCustomMessageHandler('closeNavbarDropdown', function(msg) {
+          setTimeout(closeNavbarDropdowns, 200);
+        });
+      });
+    ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.22"),
+                  .noWS = "outside"), ", v1.23"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -264,11 +290,26 @@ server <- function(input, output, session) {
   observeEvent(input$gotoStat, updateNavbarPage(session, "main", selected = "stat"))
   observeEvent(input$gotoTrend, updateNavbarPage(session, "main", selected = "trend"))
   observeEvent(input$gotoSpatial, updateNavbarPage(session, "main", selected = "spatial"))
-  observeEvent(input$gotoDatabase, updateNavbarPage(session, "main", selected = "database"))
-  observeEvent(input$gotoDistr, updateNavbarPage(session, "main", selected = "distr"))
-  observeEvent(input$gotoWeek, updateNavbarPage(session, "main", selected = "week"))
-  observeEvent(input$gotoTraffic, updateNavbarPage(session, "main", selected = "traffic"))
-  observeEvent(input$gotoCorr, updateNavbarPage(session, "main", selected = "corr"))
+  observeEvent(input$gotoDatabase, {
+    updateNavbarPage(session, "main", selected = "database")
+    session$sendCustomMessage("closeNavbarDropdown", list())
+  })
+  observeEvent(input$gotoDistr, {
+    updateNavbarPage(session, "main", selected = "distr")
+    session$sendCustomMessage("closeNavbarDropdown", list())
+  })
+  observeEvent(input$gotoWeek, {
+    updateNavbarPage(session, "main", selected = "week")
+    session$sendCustomMessage("closeNavbarDropdown", list())
+  })
+  observeEvent(input$gotoTraffic, {
+    updateNavbarPage(session, "main", selected = "traffic")
+    session$sendCustomMessage("closeNavbarDropdown", list())
+  })
+  observeEvent(input$gotoCorr, {
+    updateNavbarPage(session, "main", selected = "corr")
+    session$sendCustomMessage("closeNavbarDropdown", list())
+  })
   
   prev_slider_val <- reactiveVal(NULL)
   

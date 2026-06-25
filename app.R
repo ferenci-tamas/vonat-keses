@@ -61,6 +61,13 @@ colstops <- highcharter::list_parse2(data.frame(
 choices <- readRDS("./data/choices.rds")
 MetData <- readRDS("./data/MetData.rds")
 TrendAgg <- readRDS("./data/TrendAgg.rds")
+TrendAgg$all[, day := factor(
+  lubridate::wday(Datum, week_start = 1),
+  levels = 1:7,
+  labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
+)]
+TrendAgg$all[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
+                                  lubridate::isoweek(Datum))]
 
 desctext <- paste0(
   "A magyar vonatok késési adatait bemutató, vizualizáló, ",
@@ -195,7 +202,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.19"),
+                  .noWS = "outside"), ", v1.20"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -1224,27 +1231,36 @@ server <- function(input, output, session) {
   })
   
   output$weekOutput <- renderHighchart({
-    pd <- ProcData
+    useFilter <- input$weekTraintype == "Kiválasztott" ||
+      input$weekStation    == "Kiválasztott" ||
+      input$weekKiindulasi == "Kiválasztott" ||
+      input$weekCel        == "Kiválasztott" ||
+      input$weekVonatSzam  == "Kiválasztott"
     
-    if(input$weekTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$weekTraintypeSel)
-    if(input$weekStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$weekStationSel)
-    if(input$weekKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$weekKiindulasiSel)
-    if(input$weekCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$weekCelSel)
-    if(input$weekVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$weekVonatSzamSel)
-    
-    pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
-      dplyr::collect() |> setDT()
-    
-    pd$day <- factor(
-      lubridate::wday(pd$Datum, week_start = 1),
-      levels = 1:7,
-      labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
-    )
-    
-    pd$yearweek <- paste0(lubridate::isoyear(pd$Datum), " - ",
-                          lubridate::isoweek(pd$Datum))
-    
-    pd <- pd[, kesesstat(KumKeses, input$weekMetric), .(yearweek, day)][order(yearweek, day)]
+    if (!useFilter) {
+      pd <- TrendAgg$all[stat == input$weekMetric]
+    } else {
+      pd <- ProcData
+      
+      if(input$weekTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$weekTraintypeSel)
+      if(input$weekStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$weekStationSel)
+      if(input$weekKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$weekKiindulasiSel)
+      if(input$weekCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$weekCelSel)
+      if(input$weekVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$weekVonatSzamSel)
+      
+      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+        dplyr::collect() |> setDT()
+      
+      pd[, day := factor(
+        lubridate::wday(Datum, week_start = 1),
+        levels = 1:7,
+        labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
+      )]
+      pd[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
+                              lubridate::isoweek(Datum))]
+      
+      pd <- pd[, kesesstat(KumKeses, input$weekMetric), .(yearweek, day)][order(yearweek, day)]
+    }
     if(nrow(pd) == 0) return(NULL)
     
     p <- if(input$weekMetric %in% c(">5", ">20")) {
@@ -1363,11 +1379,9 @@ server <- function(input, output, session) {
   })
   
   output$corrOutput <- renderHighchart({
-    pd <- ProcData |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz") &
-                                      Datum >= input$corrDate[1] &
-                                      Datum <= input$corrDate[2]) |> as.data.table()
-    
-    pd <- pd[, kesesstat(KumKeses, input$corrMetric), .(Datum)]
+    pd <- TrendAgg$all[stat == input$corrMetric &
+                         Datum >= input$corrDate[1] &
+                         Datum <= input$corrDate[2]]
     pd <- merge(pd, MetData, by = "Datum")
     pd$variable <- pd[[input$corrVariable]]
     p <- hchart(pd, "point", hcaes(x = variable, y = value1)) |>

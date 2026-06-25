@@ -254,7 +254,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.27"),
+                  .noWS = "outside"), ", v1.28"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -306,18 +306,6 @@ ui <- navbarPage(
              uiOutput("corrContent"))
   )
 )
-
-# Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
-ui <- htmltools::tagQuery(ui)$
-  find("li.dropdown")$addAttrs(role = "presentation")$allTags()
-ui <- htmltools::tagQuery(ui)$
-  find("a.dropdown-toggle")$addAttrs(role = "tab", `aria-haspopup` = "menu")$allTags()
-ui <- htmltools::tagQuery(ui)$
-  find("ul.dropdown-menu")$addAttrs(role = "menu")$allTags()
-ui <- htmltools::tagQuery(ui)$
-  find("ul.dropdown-menu")$find("li")$addAttrs(role = "presentation")$allTags()
-ui <- htmltools::tagQuery(ui)$
-  find("ul.dropdown-menu")$find("a")$addAttrs(role = "menuitem")$allTags()
 
 server <- function(input, output, session) {
   observeEvent(input$gotoStat, updateNavbarPage(session, "main", selected = "stat"))

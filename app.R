@@ -207,7 +207,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.21"),
+                  .noWS = "outside"), ", v1.22"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -228,75 +228,7 @@ ui <- navbarPage(
   
   tabPanel(
     "Nyitóoldal",
-    h2("Milyen funkciói vannak az oldalnak?"),
-    # p("A weboldalon a következő funkciók érhetőek el:"),
-    tags$ul(
-      tags$li("A", actionLink("gotoStat", "Táblázatos statisztikák"), " pontban lekérdezhető az összes adat számszerűen.",
-              "Lekérdezhetőek a késések különféle statisztikái, egy vagy több napra, összesítve és naponként lebontva is. ",
-              "Az adatok szűrhetőek adott vonatnemre vagy adott állomásra, illetve ezek szerint le is bonthatóak. ",
-              "A kapott eredmények sorbarendezhetőek és lementhetőek."),
-      tags$li("Az", actionLink("gotoTrend", "Időbeli trendek"), " pontban megtekinthetőek a késések hosszú távú trendjei. ",
-              "Kiválaszthatóak különféle statisztikák, az eredmények szűrhetőek vonatnemre vagy állomásra, az előbbi szerint ",
-              "le is bonthatóak. Az ábrák interaktívak."),
-      tags$li("A", actionLink("gotoSpatial", "Területi összehasonlítás"), " pontban térképek rajzolhatóak a különféle típusú ",
-              "késésekből, állomásokra és vonalakra vonatkoztatva is. A térképek színezettek, interaktívak, szabadon nagyíthatóak."),
-      tags$li("Az egyéb elemzések között elérhető az", actionLink("gotoDatabase", "Adatbázis"), " pont, ahol megtekinthető és ",
-              "szűrhető a statisztikák mögött lévő teljes adatbázis, a ", actionLink("gotoDistr", "Napi eloszlások"), " pont,",
-              "ahol egy vagy néhány nap eloszlása vizualizálható különböző ábrázolási módszerekkel, és a ",
-              actionLink("gotoWeek", "Heti mintázat"), " pont, ahol a különböző késési statisztikák esetleges heti mintázatai ",
-              "vizsgálhatóak. Az ", actionLink("gotoTraffic", "Állomási forgalom"), "pont tartalma nem szigorúan a késésekhez ",
-              "kötődik, de hasznos információkat adhat: megmutatja, hogy adott állomásnak mekkora volt a forgalma; ez ábrázolható ",
-              "időbeli alakulásában, lebontva típus szerint, vagy megjeleníthető adott nap vagy időszak értéke térképen. ",
-              "A ", actionLink("gotoCorr", "Korrelációk"), " pontban a késéseket lehet összevetni különféle, potenciálisan ",
-              "azzal összefüggő változókkal (például a hőmérséklettel).")
-    ),
-    h2("Miért született ez az oldal?"),
-    p(paste0(
-      "A MÁV honlapján nyilvánosan elérhető minden egyes vonat minden egyes megállójánál a vonat menetrend szerinti és a ",
-      "tényleges érkezési ideje, ebből fakadóan esetleges késése is, de erről nincsen semmilyen folyamatosan frissülő, grafikonon vagy ",
-      "térképen kirajzolható, urambocsá' interaktívan lekérdezhető statisztika. Ez azért probléma, mert bár a vonatok késése gyakran tárgya ",
-      "a közbeszédnek, rendszeresen hivatkoznak rá politikusok, szakértők, nem beszélve az utazókról, de épp az előbbi hiányosságból ",
-      "fakadóan ez a közbeszéd sokszor kaotikus: a MÁV gyárt egyféle statisztikát, aztán azt eltünteti, aztán gyárt egy másikat, aztán ",
-      "arra a szakértő azt mondja, hogy nem is úgy van, az egyik szerint ez pontos, a másik szerint az hiányos, az egyik szerint 7 perc, ",
-      "a másik szerint nem is, mert 28%... Ez így szörnyű helyzet nekem, mint egyszeri, mezei állampolgárnak, meg valószínűleg az összes ",
-      "többi mezei állampolgárnak is, ha tájékozódni kíván. Pláne megnehezíti ez a helyzet a konsktruktív eszmecserét a kérdésről, hiszen ",
-      "annak elemi feltétele a közös, elfogadott információs bázis.")),
-    p(paste0(
-      "Az oldal célja a vonatok késéséről szóló közbeszéd színvonalának javítása: azt szerettem volna, hogy ahelyett, hogy ",
-      "a különféle szereplők által előrántott és egymás fejéhez vágott, egymással összehasonlíthatatlan adattartalmú, kinézetű és ",
-      "módszertanú statisztikák helyett legyen egy egységes, objektív, összehasonlítható, teljesen transzparens módszertannal készült, ",
-      "hosszú távon is fenntartható, az adatokat mindenki számára elérhető és értelmezhető formában tartalmazó oldal.")),
-    h2("Mit csinál az oldal?"),
-    p(paste0(
-      "A weboldal mögött lévő program minden éjjel letölti a MÁV honlapjáról a menetrend szerinti és tényleges érkezési időpontokat, ebből ",
-      "kiszámolja a késéseket, és utána elkészíti belőle a legkülönfélébb statisztikákat, melyeket egy interaktív lekérdező felületen, ",
-      "azaz ezen a weboldalon, elérhetővé tesz.")),
-    p("A megvalósítás R programnyelv alatt készült, a felület a Shiny-t használja. Minden további részlet elérhető a ",
-      a("https://github.com/ferenci-tamas/vonat-keses", href = "https://github.com/ferenci-tamas/vonat-keses", target = "_blank"),
-      "oldalon."),
-    p(paste0(
-      "Külön is kiemelném, hogy ezen a Github-oldalon megtalálható mind az adatokat letöltő, mind az azokat feldolgozó program, valamint a ",
-      "weboldal teljes forráskódja, így a munkám tökéletesen transzparens.")),
-    h2("Milyen fontos megjegyzések tartoznak az oldalhoz?"),
-    p(paste0(
-      "Az oldalt hobbiból, szabadidőmben fejlesztettem, így az teljes mértékben nem hivatalos, a MÁV-hoz nincsen semmilyen köze. ",
-      "Ebből az is következik, hogy a helyességére nézve nincsen semmiféle garancia, pláne hivatalos pecsét – igyekeztem ",
-      "mindenben gondosan eljárni, de hibák előfordulhatnak, így minden kritikát, továbbfejlesztési javaslatot, ötlet a ",
-      "legnagyobb örömmel veszek!")),
-    p(paste0(
-      "Fontosnak tartom még megjegyezni, hogy az oldal egy vonat adatait egyetlen egyszer tölti le egy nap (ráadásul azt is az ",
-      "éjszaka közepén), így a MÁV informatikai rendszerére nézve vélhetően semmilyen érzékelhető terhelés-növekedést nem jelent. ",
-      "Az oldal kizárólag nyilvános, bárki számára elérhető információkat használ fel.")),
-    h2("Ki készítette az oldalt?"),
-    p("Ferenci Tamás vagyok, szakmámat tekintve biostatisztikus, így a statisztikai elemzés kézre esett, ez némi vasút iránti ",
-      "érdeklődéssel kombinálva ide vezetett... Minden további részlet rólam, beleértve az elérhetőségeimet, megtalálható a ",
-      "honlapomon: ", a("https://www.medstat.hu/", href = "https://www.medstat.hu/", target = "_blank", .noWS = "outside"), "."),
-    
-    a("Facebook", href = "https://www.facebook.com/sharer.php?u=https%3A%2F%2Fwww.vonat-keses.hu",
-      target = "_blank", rel = "noopener", class="share-btn facebook"),
-    a("X/Twitter", href = "https://twitter.com/intent/tweet?url=https%3A%2F%2Fwww.vonat-keses.hu",
-      target = "_blank", rel = "noopener", class="share-btn twitter"),
-    a("E-mail", href = "mailto:?subject=vonat-keses.hu&body=vonat-keses.hu", class = "share-btn email")
+    includeMarkdown("landing.md")
   ),
   
   tabPanel("Táblázatos statisztikák", value = "stat",

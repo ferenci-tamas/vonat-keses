@@ -209,6 +209,10 @@ ui <- navbarPage(
       $(function() {
         // Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
         function fixNavbarAria() {
+          // Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
+          var main = document.querySelector('.tab-content');
+          if (main && !main.getAttribute('role')) main.setAttribute('role', 'main');
+
           document.querySelectorAll('.navbar-nav > li.dropdown').forEach(function(li) {
             li.setAttribute('role', 'presentation');
           });
@@ -254,7 +258,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.28"),
+                  .noWS = "outside"), ", v1.29"),
     
     tags$script(HTML("
       var sc_project=13147854;

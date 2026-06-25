@@ -1,7 +1,7 @@
 library(shiny)
 library(data.table)
-
 library(highcharter)
+
 hcoptslang <- getOption("highcharter.lang")
 hcoptslang$contextButtonTitle <- "Helyi menü"
 hcoptslang$exitFullscreen <- "Kilépés a teljes képernyős módból"
@@ -195,7 +195,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.18"),
+                  .noWS = "outside"), ", v1.19"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -630,8 +630,8 @@ server <- function(input, output, session) {
                            c("Nyers adatok", "Teljes késés", "Indulási késés",
                              "Állomási késés", "Nyíltvonali késés")),
               shinyWidgets::airDatepickerInput("databaseDate", "Dátum",
-                c(maxdate - 7, maxdate), minDate = mindate, maxDate = maxdate,
-                range = TRUE, firstDay = 1),
+                                               c(maxdate - 7, maxdate), minDate = mindate, maxDate = maxdate,
+                                               range = TRUE, firstDay = 1),
               shinyWidgets::virtualSelectInput(
                 "databaseVonatNem", "Vonatnem",
                 choices$VonatNem, choices$VonatNem,
@@ -947,10 +947,10 @@ server <- function(input, output, session) {
     
     useFilter <- input$trendMode %in% c("Megoszlások", "Idők") && (
       input$trendTraintype == "Kiválasztott" ||
-      input$trendStation    == "Kiválasztott" ||
-      input$trendKiindulasi == "Kiválasztott" ||
-      input$trendCel        == "Kiválasztott" ||
-      input$trendVonatSzam  == "Kiválasztott"
+        input$trendStation    == "Kiválasztott" ||
+        input$trendKiindulasi == "Kiválasztott" ||
+        input$trendCel        == "Kiválasztott" ||
+        input$trendVonatSzam  == "Kiválasztott"
     )
     
     if (!useFilter) {
@@ -1235,9 +1235,12 @@ server <- function(input, output, session) {
     pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
       dplyr::collect() |> setDT()
     
-    pd$day <- lubridate::wday(pd$Datum, label = TRUE,
-                              week_start = 1,
-                              locale = "hu_HU.utf8")
+    pd$day <- factor(
+      lubridate::wday(pd$Datum, week_start = 1),
+      levels = 1:7,
+      labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
+    )
+    
     pd$yearweek <- paste0(lubridate::isoyear(pd$Datum), " - ",
                           lubridate::isoweek(pd$Datum))
     
@@ -1255,9 +1258,7 @@ server <- function(input, output, session) {
     }
     
     p <- p |>
-      hc_xAxis(type = "category",
-               categories = paste(toupper(substring(levels(pd$day), 1, 1)),
-                                  substring(levels(pd$day), 2), sep="")) |>
+      hc_xAxis(type = "category", categories = c("H", "K", "Sz", "Cs", "P", "Szo", "V")) |>
       hc_title(text = paste0(
         keseshun(input$weekMetric),
         if(input$weekVonatSzam == "Kiválasztott") paste0(", ", paste0(names(choices$VonatNev[choices$VonatNev %in% input$weekVonatSzamSel]), collapse = ", ")) else "",
@@ -1363,8 +1364,8 @@ server <- function(input, output, session) {
   
   output$corrOutput <- renderHighchart({
     pd <- ProcData |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz") &
-                     Datum >= input$corrDate[1] &
-                     Datum <= input$corrDate[2]) |> as.data.table()
+                                      Datum >= input$corrDate[1] &
+                                      Datum <= input$corrDate[2]) |> as.data.table()
     
     pd <- pd[, kesesstat(KumKeses, input$corrMetric), .(Datum)]
     pd <- merge(pd, MetData, by = "Datum")

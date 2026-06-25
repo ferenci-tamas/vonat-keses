@@ -208,17 +208,25 @@ ui <- navbarPage(
     tags$script(HTML("
       $(function() {
         // Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
-        document.querySelectorAll('.navbar-nav .dropdown-menu').forEach(function(menu) {
-          menu.setAttribute('role', 'menu');
-          menu.querySelectorAll(':scope > li').forEach(function(li) {
+        function fixNavbarAria() {
+          document.querySelectorAll('.navbar-nav > li.dropdown').forEach(function(li) {
             li.setAttribute('role', 'presentation');
-            var item = li.querySelector('a, button');
-            if (item) item.setAttribute('role', 'menuitem');
           });
-        });
-        document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(toggle) {
-          toggle.setAttribute('aria-haspopup', 'menu');
-        });
+          document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(a) {
+            a.setAttribute('role', 'tab');
+            a.setAttribute('aria-haspopup', 'menu');
+          });
+          document.querySelectorAll('.navbar-nav .dropdown-menu').forEach(function(menu) {
+            menu.setAttribute('role', 'menu');
+            menu.querySelectorAll(':scope > li').forEach(function(li) {
+              li.setAttribute('role', 'presentation');
+              var item = li.querySelector('a, button');
+              if (item) item.setAttribute('role', 'menuitem');
+            });
+          });
+        }
+        fixNavbarAria();
+        $(document).on('shiny:connected', fixNavbarAria);
 
         function closeNavbarDropdowns() {
           document.querySelectorAll('.navbar-nav .dropdown-toggle').forEach(function(el) {
@@ -246,7 +254,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.26"),
+                  .noWS = "outside"), ", v1.27"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -298,6 +306,18 @@ ui <- navbarPage(
              uiOutput("corrContent"))
   )
 )
+
+# Azért, hogy a PageSpeed Insights audit-ja ne jelezzen problémát
+ui <- htmltools::tagQuery(ui)$
+  find("li.dropdown")$addAttrs(role = "presentation")$allTags()
+ui <- htmltools::tagQuery(ui)$
+  find("a.dropdown-toggle")$addAttrs(role = "tab", `aria-haspopup` = "menu")$allTags()
+ui <- htmltools::tagQuery(ui)$
+  find("ul.dropdown-menu")$addAttrs(role = "menu")$allTags()
+ui <- htmltools::tagQuery(ui)$
+  find("ul.dropdown-menu")$find("li")$addAttrs(role = "presentation")$allTags()
+ui <- htmltools::tagQuery(ui)$
+  find("ul.dropdown-menu")$find("a")$addAttrs(role = "menuitem")$allTags()
 
 server <- function(input, output, session) {
   observeEvent(input$gotoStat, updateNavbarPage(session, "main", selected = "stat"))

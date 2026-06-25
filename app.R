@@ -89,13 +89,14 @@ vonatszamExplanation <- paste0(
 
 dt18nurl <- "https://cdn.datatables.net/plug-ins/2.3.2/i18n/hu.json"
 
-corrVariables <- c("Középhőmérséklet" = "temp",
-                   "Minimumhőmérséklet" = "tmin",
-                   "Maximumhőmérséklet" = "tmax",
-                   "Relatív nedvesség" = "rhum",
-                   "Csapadékösszeg" = "prcp",
-                   "Átlagos szélsebesség" = "wspd",
-                   "Tengerszintre átszámított légnyomás" = "pres")
+corrVariables <- data.table(
+  var = c("temp", "tmin", "tmax", "rhum", "prcp", "wspd", "pres"),
+  name = c("Középhőmérséklet", "Minimumhőmérséklet",
+           "Maximumhőmérséklet", "Relatív nedvesség",
+           "Csapadékösszeg", "Átlagos szélsebesség",
+           "Tengerszintre átszámított légnyomás"),
+  uom = c("°C", "°C", "°C", "%", "mm", "km/h", "hPa")
+)
 
 source("utils.R")
 
@@ -106,7 +107,11 @@ expandlatlon <- function(dat) {
   dat
 }
 
-keseshun <- function(metric, short = FALSE, tolowcase = FALSE, hctooltip = FALSE) {
+pctspace <- function(x) if(x == "%") x else paste0(" ", x)
+
+keseshun <- function(metric, short = FALSE, tolowcase = FALSE, hctooltip = FALSE, onlyuom = FALSE, withuom = FALSE) {
+  uom <- if(metric %in% c(">5", ">20")) "%" else "perc"
+  if(onlyuom) return(pctspace(uom))
   res <- switch(
     metric,
     "Átlag" = if(short) "Átlag" else "Átlagos késés",
@@ -121,7 +126,7 @@ keseshun <- function(metric, short = FALSE, tolowcase = FALSE, hctooltip = FALSE
   if(hctooltip)
     res <- if(metric %in% c(">5", ">20")) paste0(res, ": {point.value1:.1f} %") else paste0(res, ": {point.value1:.2f} perc")
   if(tolowcase) res <- tolower(res)
-  res
+  if(withuom) paste0(res, " [", uom, "]") else res
 }
 
 ui <- navbarPage(
@@ -202,7 +207,7 @@ ui <- navbarPage(
   footer = list(
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.20"),
+                  .noWS = "outside"), ", v1.21"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -854,7 +859,8 @@ server <- function(input, output, session) {
                   "99. percentilis", "Maximum")),
               selectInput(
                 "corrVariable", "Vizsgált változó",
-                corrVariables),
+                setNames(corrVariables$var, corrVariables$name)),
+              checkboxInput("corrSmoother", "Simítógörbe megjelenítése", value = TRUE),
               width = 2
             ),
             mainPanel(
@@ -866,8 +872,8 @@ server <- function(input, output, session) {
                                 "A csúszka két végét ugyanoda húzva egyetlen nap választható ki.",
                                 placement = "left"
                               )), mindate, maxdate, c(mindate, maxdate),
-                          timeFormat = "%m. %d.", width = "100%"),
-              p("A meteorológiai adatok forrás: Meteostat, https://meteostat.net/"),
+                          timeFormat = "%Y. %m. %d.", width = "100%"),
+              p("A meteorológiai adatok forrása: Meteostat, https://meteostat.net/"),
               width = 10
             )
           )
@@ -1384,12 +1390,29 @@ server <- function(input, output, session) {
                          Datum <= input$corrDate[2]]
     pd <- merge(pd, MetData, by = "Datum")
     pd$variable <- pd[[input$corrVariable]]
-    p <- hchart(pd, "point", hcaes(x = variable, y = value1)) |>
-      hc_xAxis(title = list(text = names(corrVariables)[corrVariables == input$corrVariable])) |>
-      hc_yAxis(title = list(text = keseshun(input$corrMetric))) |>
-      hc_tooltip(headerFormat = "<b>{point.Datum}</b><br>",
-                 pointFormat = paste0(names(corrVariables)[corrVariables == input$corrVariable], ": {point.variable:.1f}<br>",
-                                      keseshun(input$corrMetric), ": {point.value1:.1f}")) |>
+    setorder(pd, variable)
+    lo <- loess(value1 ~ variable, data = pd)
+    smooth_df <- data.frame(x = pd$variable, y = predict(lo))
+    smooth_df <- smooth_df[!is.na(smooth_df$y), ]
+    
+    p <- hchart(pd, "point", hcaes(x = variable, y = value1))
+    if (input$corrSmoother)
+      p <- p |>
+      hc_plotOptions(scatter = list(opacity = 0.4)) |>
+      hc_add_series(data = list_parse2(smooth_df), type = "line", name = "Simító",
+                    marker = list(enabled = FALSE), enableMouseTracking = FALSE,
+                    colorIndex = 0)
+    p <- p |>
+      hc_xAxis(title = list(text = paste0(corrVariables[var == input$corrVariable]$name,
+                                          " [", corrVariables[var == input$corrVariable]$uom, "]"))) |>
+      hc_yAxis(title = list(text = keseshun(input$corrMetric, withuom = TRUE))) |>
+      hc_tooltip(headerFormat = "<b>{point.point.Datum}</b><br>",
+                 pointFormat = paste0(corrVariables[var == input$corrVariable]$name,
+                                      ": {point.variable:.1f}",
+                                      pctspace(corrVariables[var == input$corrVariable]$uom),
+                                      "<br>",
+                                      keseshun(input$corrMetric), ": {point.value1:.1f}",
+                                      keseshun(input$corrMetric, onlyuom = TRUE))) |>
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>

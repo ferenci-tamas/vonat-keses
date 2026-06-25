@@ -250,7 +250,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.31"),
+                  .noWS = "outside"), ", v1.32"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -875,32 +875,15 @@ server <- function(input, output, session) {
   }
   )
   
-  output$statOutput <- DT::renderDT({
+  statData <- reactive({
     cutoff7 <- maxdate - 7
-    cutoff30 <- maxdate -30
-    
-    pd <- switch(
-      input$timeTime,
-      "Utolsó nap" = ProcData |> dplyr::filter(Datum == maxdate),
-      "Utolsó hét" = ProcData |> dplyr::filter(Datum >= cutoff7),
-      "Utolsó hónap" = ProcData |> dplyr::filter(Datum >= cutoff30),
-      "Egyéni nap vagy intervallum" = if(length(input$timeTableCustomDate) == 1)
-        ProcData |> dplyr::filter(Datum == input$timeTableCustomDate) else
-          ProcData |> dplyr::filter(Datum >= input$timeTableCustomDate[1] &
-                                      Datum <= input$timeTableCustomDate[2])
-    )
-    pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz"))
-    
-    daterange <- pd |> dplyr::summarise(min(Datum), max(Datum)) |>
-      dplyr::collect() |> unlist() |> unname() |> as.Date()
-    
-    if(input$statTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$statTraintypeSel)
-    if(input$statStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$statStationSel)
-    if(input$statKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$statKiindulasiSel)
-    if(input$statCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$statCelSel)
-    if(input$statVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$statVonatSzamSel)
-    
-    pd <- pd |> dplyr::collect() |> setDT()
+    cutoff30 <- maxdate - 30
+
+    use_trendagg <- input$timeTableStratTime == "Naponként" &&
+      input$statStation    == "Összes egyben" &&
+      input$statKiindulasi == "Összes egyben" &&
+      input$statCel        == "Összes egyben" &&
+      input$statVonatSzam  == "Összes egyben"
     
     byvars <- character()
     if(input$timeTableStratTime == "Naponként") byvars <- c(byvars, c("Dátum" = "Datum"))
@@ -910,7 +893,59 @@ server <- function(input, output, session) {
     if(input$statCel != "Összes egyben") byvars <- c(byvars, c("Célállomás" = "Cel"))
     if(input$statVonatSzam != "Összes egyben") byvars <- c(byvars, c("Vonat" = "VonatNevLabel"))
     
-    pd <- pd[, kesesstat(KumKeses, c("N", input$statMetric)), byvars]
+    if (use_trendagg) {
+      pd <- if (input$statTraintype == "Összes egyben") TrendAgg$all else TrendAgg$byVonatNem
+      
+      pd <- switch(
+        input$timeTime,
+        "Utolsó nap" = pd[Datum == maxdate],
+        "Utolsó hét" = pd[Datum >= cutoff7],
+        "Utolsó hónap" = pd[Datum >= cutoff30],
+        "Egyéni nap vagy intervallum" = if(length(input$timeTableCustomDate) == 1)
+          pd[Datum == as.Date(input$timeTableCustomDate)] else
+            pd[Datum >= as.Date(input$timeTableCustomDate[1]) &
+               Datum <= as.Date(input$timeTableCustomDate[2])]
+      )
+      
+      if(input$statTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$statTraintypeSel]
+      
+      daterange <- range(pd$Datum)
+      
+      requested_stats <- c(
+        "Megállások száma",  # "N" is always included
+        if("Megoszlás" %in% input$statMetric) cutlabs,
+        setdiff(input$statMetric, "Megoszlás")
+      )
+      pd <- pd[stat %in% requested_stats]
+      
+      setnames(pd, "Datum", "Dátum")
+      if("VonatNem" %in% names(pd)) setnames(pd, "VonatNem", "Vonatnem")
+      
+    } else {
+      pd <- switch(
+        input$timeTime,
+        "Utolsó nap" = ProcData |> dplyr::filter(Datum == maxdate),
+        "Utolsó hét" = ProcData |> dplyr::filter(Datum >= cutoff7),
+        "Utolsó hónap" = ProcData |> dplyr::filter(Datum >= cutoff30),
+        "Egyéni nap vagy intervallum" = if(length(input$timeTableCustomDate) == 1)
+          ProcData |> dplyr::filter(Datum == input$timeTableCustomDate) else
+            ProcData |> dplyr::filter(Datum >= input$timeTableCustomDate[1] &
+                                        Datum <= input$timeTableCustomDate[2])
+      )
+      
+      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+        dplyr::collect() |> setDT()
+      
+      daterange <- range(pd$Datum)
+      
+      if(input$statTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$statTraintypeSel]
+      if(input$statStation == "Kiválasztott") pd <- pd[Erkezo %in% input$statStationSel]
+      if(input$statKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$statKiindulasiSel]
+      if(input$statCel == "Kiválasztott") pd <- pd[Cel %in% input$statCelSel]
+      if(input$statVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$statVonatSzamSel]
+      
+      pd <- pd[, kesesstat(KumKeses, c("N", input$statMetric)), byvars]
+    }
     
     if(nrow(pd) == 0) return(NULL)
     
@@ -921,6 +956,23 @@ server <- function(input, output, session) {
                 value.var = c("formatted", "value1"))[order(`Dátum`, decreasing = TRUE)]
     names(pd) <- gsub("formatted_", "", names(pd))
     
+    list(pd = pd, byvars = byvars)
+  }) |> bindCache(
+    input$timeTime, input$timeTableCustomDate, input$timeTableStratTime,
+    input$statTraintype, input$statTraintypeSel,
+    input$statStation, input$statStationSel,
+    input$statKiindulasi, input$statKiindulasiSel,
+    input$statCel, input$statCelSel,
+    input$statVonatSzam, input$statVonatSzamSel,
+    input$statMetric
+  )
+  
+  output$statOutput <- DT::renderDT({
+    result <- statData()
+    if(is.null(result)) return(NULL)
+    
+    pd <- result$pd
+    byvars <- result$byvars
     statcolnumber <- (ncol(pd) - length(byvars)) / 2
     
     DT::datatable(

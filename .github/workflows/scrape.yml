@@ -33,6 +33,7 @@ jobs:
             any::sf
             any::highcharter
             any::jsonlite
+            any::markdown
 
       - name: Checkout
         uses: actions/checkout@v5

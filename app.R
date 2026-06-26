@@ -41,6 +41,21 @@ hcoptslang$decimalPoint <- ","
 hcoptslang$numericSymbols <- NA
 options(highcharter.lang = hcoptslang)
 options(highcharter.download_map_data = FALSE)
+
+hc_exporting_hu <- function(...) {
+  hc_exporting(
+    enabled     = TRUE,
+    sourceWidth  = 1600,
+    sourceHeight = 900,
+    pdfFont = list(
+      normal     = "fonts/DejaVuSans.ttf",
+      bold       = "fonts/DejaVuSans-Bold.ttf",
+      italic     = "fonts/DejaVuSans-Oblique.ttf",
+      bolditalic = "fonts/DejaVuSans-BoldOblique.ttf"
+    ),
+    ...
+  )
+}
 # source("hw_grid.R")
 
 delayedAssign("ProcData", arrow::open_dataset(list.files("./data/", "ProcData*", full.names = TRUE), format = "feather"))
@@ -242,7 +257,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.34"),
+                  .noWS = "outside"), ", v1.35"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -1092,8 +1107,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900,
-                   chartOptions = list(navigator = list(enabled = FALSE)))
+      hc_exporting_hu(chartOptions = list(navigator = list(enabled = FALSE)))
   })
   
   output$spatialOutput <- renderHighchart({
@@ -1195,7 +1209,7 @@ server <- function(input, output, session) {
                                paste0(range(input$spatialTimerange), collapse = " - "))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
+      hc_exporting_hu()
   })
   
   output$distrOutput <- renderHighchart({
@@ -1227,7 +1241,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
+      hc_exporting_hu()
   })
   
   output$databaseOutput <- DT::renderDT({
@@ -1345,7 +1359,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
+      hc_exporting_hu()
   })
   
   output$trafficOutput <- renderHighchart({
@@ -1396,8 +1410,7 @@ server <- function(input, output, session) {
         hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
         hc_caption(text = figcap) |>
         hc_credits(enabled = TRUE) |>
-        hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900,
-                     chartOptions = list(navigator = list(enabled = FALSE)))
+        hc_exporting_hu(chartOptions = list(navigator = list(enabled = FALSE)))
     } else if(input$trafficMode == "Térkép") {
       pd <- ProcData |> dplyr::filter(Datum >= input$trafficMapDate[1] &
                                         Datum <= input$trafficMapDate[2])
@@ -1444,7 +1457,7 @@ server <- function(input, output, session) {
                                  paste0(range(input$trafficMapDate), collapse = " - "))) |>
         hc_caption(text = figcap) |>
         hc_credits(enabled = TRUE) |>
-        hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
+        hc_exporting_hu()
     }
     
     p
@@ -1482,7 +1495,7 @@ server <- function(input, output, session) {
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
       hc_caption(text = figcap) |>
       hc_credits(enabled = TRUE) |>
-      hc_exporting(enabled = TRUE, sourceWidth = 1600, sourceHeight = 900)
+      hc_exporting_hu()
     p
   })
 }

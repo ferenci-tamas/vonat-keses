@@ -46,10 +46,9 @@ options(highcharter.download_map_data = FALSE)
 ProcData <- arrow::open_dataset(list.files("./data/", "ProcData*", full.names = TRUE), format = "feather")
 RawData <- arrow::open_dataset(list.files("./data/", "RawData*", full.names = TRUE), format = "feather")
 
-mindate <- ProcData |> dplyr::summarise(min(Datum)) |> dplyr::collect() |>
-  dplyr::pull()
-maxdate <- ProcData |> dplyr::summarise(max(Datum)) |> dplyr::collect() |>
-  dplyr::pull()
+daterange <- readRDS("./data/daterange.rds")
+mindate <- daterange$min
+maxdate <- daterange$max
 
 allomaskoord <- readRDS("./data/allomaskoord.rds")
 mapdata <- readRDS("./data/mapdata.rds")
@@ -61,13 +60,6 @@ colstops <- highcharter::list_parse2(data.frame(
 choices <- readRDS("./data/choices.rds")
 MetData <- readRDS("./data/MetData.rds")
 TrendAgg <- readRDS("./data/TrendAgg.rds")
-TrendAgg$all[, day := factor(
-  lubridate::wday(Datum, week_start = 1),
-  levels = 1:7,
-  labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
-)]
-TrendAgg$all[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
-                                  lubridate::isoweek(Datum))]
 
 desctext <- paste0(
   "A magyar vonatok késési adatait bemutató, vizualizáló, ",
@@ -250,7 +242,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.32"),
+                  .noWS = "outside"), ", v1.33"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -271,7 +263,7 @@ ui <- navbarPage(
   
   tabPanel(
     "Nyitóoldal",
-    includeMarkdown("landing.md")
+    includeHTML("landing.html")
   ),
   
   tabPanel("Táblázatos statisztikák", value = "stat",

@@ -43,23 +43,23 @@ options(highcharter.lang = hcoptslang)
 options(highcharter.download_map_data = FALSE)
 # source("hw_grid.R")
 
-ProcData <- arrow::open_dataset(list.files("./data/", "ProcData*", full.names = TRUE), format = "feather")
-RawData <- arrow::open_dataset(list.files("./data/", "RawData*", full.names = TRUE), format = "feather")
+delayedAssign("ProcData", arrow::open_dataset(list.files("./data/", "ProcData*", full.names = TRUE), format = "feather"))
+delayedAssign("RawData", arrow::open_dataset(list.files("./data/", "RawData*", full.names = TRUE), format = "feather"))
 
 daterange <- readRDS("./data/daterange.rds")
 mindate <- daterange$min
 maxdate <- daterange$max
 
-allomaskoord <- readRDS("./data/allomaskoord.rds")
-mapdata <- readRDS("./data/mapdata.rds")
+delayedAssign("allomaskoord", readRDS("./data/allomaskoord.rds"))
+delayedAssign("mapdata", readRDS("./data/mapdata.rds"))
 
-colstops <- highcharter::list_parse2(data.frame(
+delayedAssign("colstops", highcharter::list_parse2(data.frame(
   q = seq(0, 1, length.out = 100),
   col = scales::pal_seq_gradient("blue", "red")(
-    seq(0,1, length.out = 100))))
-choices <- readRDS("./data/choices.rds")
-MetData <- readRDS("./data/MetData.rds")
-TrendAgg <- readRDS("./data/TrendAgg.rds")
+    seq(0,1, length.out = 100)))))
+delayedAssign("choices", readRDS("./data/choices.rds"))
+delayedAssign("MetData", readRDS("./data/MetData.rds"))
+delayedAssign("TrendAgg", readRDS("./data/TrendAgg.rds"))
 
 desctext <- paste0(
   "A magyar vonatok késési adatait bemutató, vizualizáló, ",
@@ -242,7 +242,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.33"),
+                  .noWS = "outside"), ", v1.34"),
     
     tags$script(HTML("
       var sc_project=13147854;

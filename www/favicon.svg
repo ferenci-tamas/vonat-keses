@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Car body -->
+  <rect x="4" y="18" width="50" height="22" rx="3" fill="#1a5276"/>
+  <!-- Roof -->
+  <path d="M7 18 Q7 13 12 13 L46 13 Q51 13 51 18" fill="#1b4f72"/>
+  <!-- Windows -->
+  <rect x="10" y="22" width="8" height="8" rx="1.5" fill="#aed6f1"/>
+  <rect x="21" y="22" width="8" height="8" rx="1.5" fill="#aed6f1"/>
+  <rect x="32" y="22" width="8" height="8" rx="1.5" fill="#aed6f1"/>
+  <!-- Door -->
+  <rect x="43" y="20" width="7" height="16" rx="1" fill="#2980b9"/>
+  <circle cx="45" cy="28" r="0.8" fill="#f9e79f"/>
+  <!-- Stripe -->
+  <rect x="4" y="35" width="50" height="3" fill="#f39c12"/>
+  <!-- Undercarriage -->
+  <rect x="6" y="40" width="46" height="4" rx="1" fill="#2c3e50"/>
+  <!-- Bogie frames -->
+  <rect x="10" y="44" width="14" height="3" rx="1" fill="#34495e"/>
+  <rect x="34" y="44" width="14" height="3" rx="1" fill="#34495e"/>
+  <!-- Wheels -->
+  <circle cx="14" cy="50" r="4.5" fill="#2c3e50"/>
+  <circle cx="14" cy="50" r="2" fill="#7f8c8d"/>
+  <circle cx="22" cy="50" r="4.5" fill="#2c3e50"/>
+  <circle cx="22" cy="50" r="2" fill="#7f8c8d"/>
+  <circle cx="38" cy="50" r="4.5" fill="#2c3e50"/>
+  <circle cx="38" cy="50" r="2" fill="#7f8c8d"/>
+  <circle cx="46" cy="50" r="4.5" fill="#2c3e50"/>
+  <circle cx="46" cy="50" r="2" fill="#7f8c8d"/>
+  <!-- Rail -->
+  <rect x="2" y="54" width="60" height="2.5" rx="1" fill="#7f8c8d"/>
+  <!-- Clock overlay (top-right) -->
+  <circle cx="54" cy="12" r="10" fill="white" stroke="#c0392b" stroke-width="2"/>
+  <line x1="54" y1="12" x2="54" y2="6" stroke="#2c3e50" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="54" y1="12" x2="59" y2="13.5" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="54" cy="12" r="1.2" fill="#2c3e50"/>
+</svg>

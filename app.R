@@ -173,6 +173,7 @@ ui <- navbarPage(
       tags$meta(name = "twitter:image",
                 content = paste0(urlpre,
                                  "vonat-keses-image.png")),
+      tags$link(rel = "icon", type = "image/svg+xml", href = "favicon.svg"),
       
       tags$style(HTML(".share-btn {
         display: inline-block;
@@ -257,7 +258,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.36"),
+                  .noWS = "outside"), ", v1.37"),
     
     tags$script(HTML("
       var sc_project=13147854;

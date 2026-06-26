@@ -269,7 +269,20 @@ TrendAgg <- list(
   byVonatNem = trendBase[, kesesstat(KumKeses, allMetrics), .(Datum, VonatNem)][order(Datum, VonatNem)]
 )
 
+TrendAgg$all[, day := factor(
+  lubridate::wday(Datum, week_start = 1),
+  levels = 1:7,
+  labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
+)]
+TrendAgg$all[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
+                                  lubridate::isoweek(Datum))]
+
 saveRDS(TrendAgg, "./data/TrendAgg.rds")
+
+saveRDS(
+  list(min = min(trendBase$Datum), max = max(trendBase$Datum)),
+  "./data/daterange.rds"
+)
 
 ##### Állomás #####
 
@@ -331,3 +344,10 @@ for (i in seq_along(dissolved$features))
 result <- md
 result$features <- dissolved$features
 saveRDS(result, "./data/mapdata.rds")
+
+##### Nyitóoldal #####
+
+writeLines(
+  markdown::mark_html(text = readLines("landing.md"), template = FALSE),
+  "landing.html"
+)

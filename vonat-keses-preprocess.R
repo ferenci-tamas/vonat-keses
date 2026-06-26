@@ -261,12 +261,9 @@ trendBase <- ProcDataAll |>
   dplyr::collect() |>
   setDT()
 
-allMetrics <- c("N", "Megoszlás", ">5", ">20", "Átlag", "Medián",
-                "75. percentilis", "90. percentilis", "99. percentilis", "Maximum")
-
 TrendAgg <- list(
-  all        = trendBase[, kesesstat(KumKeses, allMetrics), .(Datum)][order(Datum)],
-  byVonatNem = trendBase[, kesesstat(KumKeses, allMetrics), .(Datum, VonatNem)][order(Datum, VonatNem)]
+  all        = trendBase[, kesesstat(KumKeses), .(Datum)][order(Datum)],
+  byVonatNem = trendBase[, kesesstat(KumKeses), .(Datum, VonatNem)][order(Datum, VonatNem)]
 )
 
 TrendAgg$all[, day := factor(

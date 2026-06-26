@@ -2,14 +2,22 @@ library(data.table)
 
 cutlabs <- c("-0", "1-5", "6-10", "11-15", "16-20", "21-30", "31-45", "46-60", "61-")
 
-kesesstat <- function(x, metric) {
+kesesstat <- function(x, metric = c("N", "Megoszlás", ">5", ">20", "Átlag", "Medián",
+                                    "75. percentilis", "90. percentilis", "99. percentilis",
+                                    "Maximum", "Hiányzó")) {
   if (all(is.na(x)) || length(x) == 0) return(NULL)
-  
-  x <- x[!is.na(x)]
   
   stats_list <- list()
   value1_list <- list()
   value2_list <- list()
+  
+  if ("Hiányzó" %in% metric) {
+    stats_list[["Hiányzó"]] <- "Hiányzó"
+    value1_list[["Hiányzó"]] <- mean(is.na(x)) * 100
+    value2_list[["Hiányzó"]] <- sum(is.na(x))
+  }
+  
+  x <- x[!is.na(x)]
   
   if ("N" %in% metric) {
     stats_list[["N"]] <- "Megállások száma"
@@ -24,9 +32,8 @@ kesesstat <- function(x, metric) {
     value2_list[["Megoszlás"]] <- as.numeric(tab)
   }
   
-  if (any(c(
-    "Átlag", "Medián", "75. percentilis", "90. percentilis",
-    "99. percentilis", "Maximum") %in% metric)) {
+  if (any(c("Átlag", "Medián", "75. percentilis", "90. percentilis",
+            "99. percentilis", "Maximum") %in% metric)) {
     x_pmax0 <- pmax(0, x)
   }
   
@@ -94,7 +101,7 @@ kesesstat <- function(x, metric) {
   )
   
   res[, formatted := fifelse(
-    stat %in% c(cutlabs, ">5", ">20"),
+    stat %in% c(cutlabs, ">5", ">20", "Hiányzó"),
     paste0(round(value1, 1), "% (", value2, ")"),
     fifelse(stat %in% c("Átlag", "Medián", "75. percentilis",
                         "90. percentilis", "99. percentilis",

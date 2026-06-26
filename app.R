@@ -611,7 +611,7 @@ server <- function(input, output, session) {
             ),
             
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("spatialOutput", height = "calc(100vh - 250px)")),
+              shinycssloaders::withSpinner(highchartOutput("spatialOutput", height = "calc(100vh - 300px)")),
               sliderInput("spatialTimerange",
                           div("Vizsgált időpont vagy időszak",
                               bslib::tooltip(
@@ -829,7 +829,7 @@ server <- function(input, output, session) {
               width = 2
             ),
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("trafficOutput", height = "calc(100vh - 250px)")),
+              shinycssloaders::withSpinner(highchartOutput("trafficOutput", height = "calc(100vh - 300px)")),
               conditionalPanel(
                 "input.trafficMode == 'Térkép'",
                 sliderInput("trafficMapDate",
@@ -861,7 +861,7 @@ server <- function(input, output, session) {
               width = 2
             ),
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("corrOutput", height = "calc(100vh - 250px)")),
+              shinycssloaders::withSpinner(highchartOutput("corrOutput", height = "calc(100vh - 330px)")),
               sliderInput("corrDate",
                           div("Vizsgált időpont vagy időszak",
                               bslib::tooltip(

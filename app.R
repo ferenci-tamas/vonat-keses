@@ -257,7 +257,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.35"),
+                  .noWS = "outside"), ", v1.36"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -584,7 +584,7 @@ server <- function(input, output, session) {
             ),
             
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("trendOutput")),
+              shinycssloaders::withSpinner(highchartOutput("trendOutput", height = "calc(100vh - 180px)")),
               width = 10
             )
           )
@@ -611,7 +611,7 @@ server <- function(input, output, session) {
             ),
             
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("spatialOutput")),
+              shinycssloaders::withSpinner(highchartOutput("spatialOutput", height = "calc(100vh - 250px)")),
               sliderInput("spatialTimerange",
                           div("Vizsgált időpont vagy időszak",
                               bslib::tooltip(
@@ -705,7 +705,7 @@ server <- function(input, output, session) {
               width = 2
             ),
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("distrOutput")),
+              shinycssloaders::withSpinner(highchartOutput("distrOutput", height = "calc(100vh - 180px)")),
               width = 10
             )
           )
@@ -798,7 +798,7 @@ server <- function(input, output, session) {
             ),
             
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("weekOutput")),
+              shinycssloaders::withSpinner(highchartOutput("weekOutput", height = "calc(100vh - 180px)")),
               width = 10
             )
           )
@@ -829,7 +829,7 @@ server <- function(input, output, session) {
               width = 2
             ),
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("trafficOutput")),
+              shinycssloaders::withSpinner(highchartOutput("trafficOutput", height = "calc(100vh - 250px)")),
               conditionalPanel(
                 "input.trafficMode == 'Térkép'",
                 sliderInput("trafficMapDate",
@@ -861,7 +861,7 @@ server <- function(input, output, session) {
               width = 2
             ),
             mainPanel(
-              shinycssloaders::withSpinner(highchartOutput("corrOutput")),
+              shinycssloaders::withSpinner(highchartOutput("corrOutput", height = "calc(100vh - 250px)")),
               sliderInput("corrDate",
                           div("Vizsgált időpont vagy időszak",
                               bslib::tooltip(

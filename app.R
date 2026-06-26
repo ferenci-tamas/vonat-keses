@@ -79,7 +79,7 @@ delayedAssign("TrendAgg", readRDS("./data/TrendAgg.rds"))
 desctext <- paste0(
   "A magyar vonatok késési adatait bemutató, vizualizáló, ",
   "elemezhetővé tevő oldal. Írta: Ferenci Tamás.")
-urlpre <- "http://www.vonat-keses.hu/"
+urlpre <- "https://www.vonat-keses.hu/"
 figcap <- "Ferenci Tamás, www.medstat.hu"
 
 kesesExplanation <- paste0(
@@ -93,6 +93,12 @@ vonatszamExplanation <- paste0(
   "történik. A megjelenített név csak tájékoztató jellegű, az ",
   "adott vonatszámhoz tartozó leggyakoribb megnevezés az ",
   "adatbázisban.")
+hianyzoExplanation <- paste0(
+  "A hiányzó késési idő lehet informatikai hiba eredménye is, de az esetek ",
+  "legnagyobb részében arra utal, hogy a kérdéses vonat nem is érkezett meg ",
+  "arra az állomásra, ahol az adat hiányzik. Ezek aránya azért fontos, mert ",
+  "az ilyen esetek nem jelennek meg a késési idők statisztikáiban."
+)
 
 dt18nurl <- "https://cdn.datatables.net/plug-ins/2.3.2/i18n/hu.json"
 
@@ -116,8 +122,8 @@ expandlatlon <- function(dat) {
 
 pctspace <- function(x) if(x == "%") x else paste0(" ", x)
 
-keseshun <- function(metric, short = FALSE, tolowcase = FALSE, hctooltip = FALSE, onlyuom = FALSE, withuom = FALSE) {
-  uom <- if(metric %in% c(">5", ">20")) "%" else "perc"
+keseshun <- function(metric, short = FALSE, tolowercase = FALSE, hctooltip = FALSE, onlyuom = FALSE, withuom = FALSE) {
+  uom <- if(metric %in% c(">5", ">20", "Hiányzó")) "%" else "perc"
   if(onlyuom) return(pctspace(uom))
   res <- switch(
     metric,
@@ -128,13 +134,19 @@ keseshun <- function(metric, short = FALSE, tolowcase = FALSE, hctooltip = FALSE
     "99. percentilis" = if(short) "99. percentilis" else "A késések 99. percentilise",
     "Maximum" = if(short) "Maximum" else "Maximális késés",
     ">5" = "5 percet meghaladó késések aránya",
-    ">20" = "20 percet meghaladó késések aránya"
+    ">20" = "20 percet meghaladó késések aránya",
+    "Hiányzó" = "Hiányzó adatok aránya"
   )
   if(hctooltip)
-    res <- if(metric %in% c(">5", ">20")) paste0(res, ": {point.value1:.1f} %") else paste0(res, ": {point.value1:.2f} perc")
-  if(tolowcase) res <- tolower(res)
+    res <- if(metric %in% c(">5", ">20", "Hiányzó")) paste0(res, ": {point.value1:.1f}%") else paste0(res, ": {point.value1:.2f} perc")
+  if(tolowercase) res <- tolower(res)
   if(withuom) paste0(res, " [", uom, "]") else res
 }
+
+statlevels <- c("Megállások száma", "-0", "1-5", "6-10", "11-15", "16-20",
+                "21-30", "31-45", "46-60", "61-", ">5", ">20", "Átlag",
+                "Medián", "75. percentilis", "90. percentilis",
+                "99. percentilis", "Maximum", "Hiányzó")
 
 ui <- navbarPage(
   theme = bslib::bs_theme(bootswatch = "default"),
@@ -257,8 +269,8 @@ ui <- navbarPage(
       });
     ")),
     hr(),
-    p("Írta: ", a("Ferenci Tamás", href = "http://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.37"),
+    p("Írta: ", a("Ferenci Tamás", href = "https://www.medstat.hu/", target = "_blank",
+                  .noWS = "outside"), ", v1.38"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -449,11 +461,15 @@ server <- function(input, output, session) {
                   optionsSelectedText = "vonat kiválasztva")
               ),
               checkboxGroupInput(
-                "statMetric", "Megjelenített statisztikák",
+                "statMetric",
+                div("Megjelenített statisztikák",
+                    bslib::tooltip(
+                      bsicons::bs_icon("question-circle"),
+                      hianyzoExplanation, placement = "left")),
                 c("Megoszlás", ">5", ">20", "Átlag", "Medián",
                   "75. percentilis", "90. percentilis",
-                  "99. percentilis", "Maximum"),
-                c("Megoszlás", ">5", ">20", "Átlag")),
+                  "99. percentilis", "Maximum", "Hiányzó"),
+                c("Megoszlás", ">5", ">20", "Átlag", "Hiányzó")),
               width = 2
             ),
             
@@ -551,14 +567,20 @@ server <- function(input, output, session) {
               conditionalPanel(
                 "input.trendMode == 'Megoszlások' & input.trendTraintype != 'Lebontás'",
                 checkboxGroupInput("trendStatsFreq",
-                                   "Megjelenített statisztikák",
-                                   c(">5", ">20"), c(">5", ">20"))
+                                   div("Megjelenített statisztikák",
+                                       bslib::tooltip(
+                                         bsicons::bs_icon("question-circle"),
+                                         hianyzoExplanation, placement = "left")),
+                                   c(">5", ">20", "Hiányzó"), c(">5", ">20"))
               ),
               conditionalPanel(
                 "input.trendMode == 'Megoszlások' & input.trendTraintype == 'Lebontás'",
                 radioButtons("trendStatsFreqSingle",
-                             "Megjelenített statisztikák",
-                             c(">5", ">20"))
+                             div("Megjelenített statisztikák",
+                                 bslib::tooltip(
+                                   bsicons::bs_icon("question-circle"),
+                                   hianyzoExplanation, placement = "left")),
+                             c(">5", ">20", "Hiányzó"))
               ),
               conditionalPanel(
                 "input.trendMode == 'Idők' & input.trendTraintype != 'Lebontás'",
@@ -604,10 +626,14 @@ server <- function(input, output, session) {
                            c("Teljes késés", "Indulási késés",
                              "Állomási késés", "Nyíltvonali késés")),
               radioButtons(
-                "spatialMetric", "Megjelenített statisztika",
+                "spatialMetric",
+                div("Megjelenített statisztika",
+                    bslib::tooltip(
+                      bsicons::bs_icon("question-circle"),
+                      hianyzoExplanation, placement = "left")),
                 c(">5", ">20", "Átlag", "Medián",
                   "75. percentilis", "90. percentilis",
-                  "99. percentilis", "Maximum")),
+                  "99. percentilis", "Maximum", "Hiányzó")),
               width = 2
             ),
             
@@ -716,10 +742,14 @@ server <- function(input, output, session) {
           sidebarLayout(
             sidebarPanel(
               selectInput(
-                "weekMetric", "Használt mutató",
+                "weekMetric",
+                div("Használt mutató",
+                    bslib::tooltip(
+                      bsicons::bs_icon("question-circle"),
+                      hianyzoExplanation, placement = "left")),
                 c(">5", ">20", "Átlag",
                   "Medián", "75. percentilis", "90. percentilis",
-                  "99. percentilis", "Maximum")),
+                  "99. percentilis", "Maximum", "Hiányzó")),
               radioButtons("weekTraintype", "Vonatnem",
                            c("Összes egyben", "Kiválasztott")),
               conditionalPanel(
@@ -851,10 +881,14 @@ server <- function(input, output, session) {
           sidebarLayout(
             sidebarPanel(
               radioButtons(
-                "corrMetric", "Megjelenített statisztika",
+                "corrMetric",
+                div("Megjelenített statisztika",
+                    bslib::tooltip(
+                      bsicons::bs_icon("question-circle"),
+                      hianyzoExplanation, placement = "left")),
                 c(">5", ">20", "Átlag", "Medián",
                   "75. percentilis", "90. percentilis",
-                  "99. percentilis", "Maximum")),
+                  "99. percentilis", "Maximum", "Hiányzó")),
               selectInput(
                 "corrVariable", "Vizsgált változó",
                 setNames(corrVariables$var, corrVariables$name)),
@@ -886,7 +920,7 @@ server <- function(input, output, session) {
   statData <- reactive({
     cutoff7 <- maxdate - 7
     cutoff30 <- maxdate - 30
-
+    
     use_trendagg <- input$timeTableStratTime == "Naponként" &&
       input$statStation    == "Összes egyben" &&
       input$statKiindulasi == "Összes egyben" &&
@@ -912,7 +946,7 @@ server <- function(input, output, session) {
         "Egyéni nap vagy intervallum" = if(length(input$timeTableCustomDate) == 1)
           pd[Datum == as.Date(input$timeTableCustomDate)] else
             pd[Datum >= as.Date(input$timeTableCustomDate[1]) &
-               Datum <= as.Date(input$timeTableCustomDate[2])]
+                 Datum <= as.Date(input$timeTableCustomDate[2])]
       )
       
       if(input$statTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$statTraintypeSel]
@@ -920,7 +954,7 @@ server <- function(input, output, session) {
       daterange <- range(pd$Datum)
       
       requested_stats <- c(
-        "Megállások száma",  # "N" is always included
+        "Megállások száma",
         if("Megoszlás" %in% input$statMetric) cutlabs,
         setdiff(input$statMetric, "Megoszlás")
       )
@@ -960,7 +994,7 @@ server <- function(input, output, session) {
     if(!"Dátum" %in% colnames(pd)) pd$`Dátum` <- paste0(daterange, collapse = " - ")
     byvars <- union("Dátum", names(byvars))
     
-    pd <- dcast(pd, as.formula(paste0("`", paste0(byvars, collapse = "`+`"), "`~ factor(stat, levels = unique(pd$stat))")),
+    pd <- dcast(pd, as.formula(paste0("`", paste0(byvars, collapse = "`+`"), "`~ factor(stat, levels = statlevels)")),
                 value.var = c("formatted", "value1"))[order(`Dátum`, decreasing = TRUE)]
     names(pd) <- gsub("formatted_", "", names(pd))
     
@@ -1335,7 +1369,7 @@ server <- function(input, output, session) {
     }
     if(nrow(pd) == 0) return(NULL)
     
-    p <- if(input$weekMetric %in% c(">5", ">20")) {
+    p <- if(input$weekMetric %in% c(">5", ">20", "Hiányzó")) {
       hchart(pd, "line", hcaes(x = day, y = value1, group = yearweek)) |>
         hc_yAxis(title = list(text = "Arány [%]")) |>
         hc_tooltip(valueDecimals = 1, valueSuffix = " %")

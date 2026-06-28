@@ -103,12 +103,14 @@ hianyzoExplanation <- paste0(
 dt18nurl <- "https://cdn.datatables.net/plug-ins/2.3.2/i18n/hu.json"
 
 corrVariables <- data.table(
-  var = c("temp", "tmin", "tmax", "rhum", "prcp", "wspd", "pres"),
+  var = c("temp", "tmin", "tmax", "rhum", "prcp", "wspd", "pres",
+          "VonatokSzama"),
   name = c("Középhőmérséklet", "Minimumhőmérséklet",
            "Maximumhőmérséklet", "Relatív nedvesség",
            "Csapadékösszeg", "Átlagos szélsebesség",
-           "Tengerszintre átszámított légnyomás"),
-  uom = c("°C", "°C", "°C", "%", "mm", "km/h", "hPa")
+           "Tengerszintre átszámított légnyomás",
+           "Közlekedő vonatok száma"),
+  uom = c("°C", "°C", "°C", "%", "mm", "km/h", "hPa", "db")
 )
 
 source("utils.R")
@@ -270,7 +272,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "https://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.39"),
+                  .noWS = "outside"), ", v1.40"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -1506,7 +1508,9 @@ server <- function(input, output, session) {
                          Datum >= input$corrDate[1] &
                          Datum <= input$corrDate[2]]
     pd <- merge(pd, MetData, by = "Datum")
+    pd <- merge(pd, TrendAgg$all[stat == "Vonatok száma", .(Datum, VonatokSzama = value1)], by = "Datum")
     pd$variable <- pd[[input$corrVariable]]
+    pd <- pd[!Datum %in% c("2025-06-01", "2025-06-11", "2025-09-14", "2025-09-22", "2025-10-07", "2026-04-30", "2026-06-23")] # nem teljesen letöltődött napok
     setorder(pd, variable)
     lo <- loess(value1 ~ variable, data = pd)
     smooth_df <- data.frame(x = pd$variable, y = predict(lo))

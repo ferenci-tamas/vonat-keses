@@ -143,10 +143,10 @@ keseshun <- function(metric, short = FALSE, tolowercase = FALSE, hctooltip = FAL
   if(withuom) paste0(res, " [", uom, "]") else res
 }
 
-statlevels <- c("Megállások száma", "-0", "1-5", "6-10", "11-15", "16-20",
-                "21-30", "31-45", "46-60", "61-", ">5", ">20", "Átlag",
-                "Medián", "75. percentilis", "90. percentilis",
-                "99. percentilis", "Maximum", "Hiányzó")
+statlevels <- c("Megállások száma", "Vonatok száma", "-0", "1-5", "6-10",
+                "11-15", "16-20", "21-30", "31-45", "46-60", "61-", ">5",
+                ">20", "Átlag", "Medián", "75. percentilis",
+                "90. percentilis", "99. percentilis", "Maximum", "Hiányzó")
 
 ui <- navbarPage(
   theme = bslib::bs_theme(bootswatch = "default"),
@@ -270,7 +270,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "https://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.38"),
+                  .noWS = "outside"), ", v1.39"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -954,7 +954,7 @@ server <- function(input, output, session) {
       daterange <- range(pd$Datum)
       
       requested_stats <- c(
-        "Megállások száma",
+        "Megállások száma", "Vonatok száma",
         if("Megoszlás" %in% input$statMetric) cutlabs,
         setdiff(input$statMetric, "Megoszlás")
       )
@@ -986,7 +986,10 @@ server <- function(input, output, session) {
       if(input$statCel == "Kiválasztott") pd <- pd[Cel %in% input$statCelSel]
       if(input$statVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$statVonatSzamSel]
       
-      pd <- pd[, kesesstat(KumKeses, c("N", input$statMetric)), byvars]
+      pd <- rbind(pd[, kesesstat(KumKeses, c("N", input$statMetric)), byvars],
+                  unique(pd, by = c("Datum", "VonatSzam"))[
+                    , .(stat = "Vonatok száma", value1 = as.numeric(.N),
+                        value2 = NA_real_, formatted = as.character(.N)), byvars])
     }
     
     if(nrow(pd) == 0) return(NULL)

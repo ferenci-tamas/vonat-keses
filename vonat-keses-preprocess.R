@@ -271,8 +271,16 @@ trendBase <- ProcDataAll |>
   setDT()
 
 TrendAgg <- list(
-  all        = trendBase[, kesesstat(KumKeses), .(Datum)][order(Datum)],
-  byVonatNem = trendBase[, kesesstat(KumKeses), .(Datum, VonatNem)][order(Datum, VonatNem)]
+  all        = rbind(trendBase[, kesesstat(KumKeses), .(Datum)],
+                     unique(trendBase, by = c("Datum", "VonatSzam"))[
+                       , .(stat = "Vonatok száma", value1 = as.numeric(.N),
+                           value2 = NA_real_, formatted = as.character(.N)),
+                       .(Datum)])[order(Datum)],
+  byVonatNem = rbind(trendBase[, kesesstat(KumKeses), .(Datum, VonatNem)],
+                     unique(trendBase, by = c("Datum", "VonatSzam"))[
+                       , .(stat = "Vonatok száma", value1 = as.numeric(.N),
+                           value2 = NA_real_, formatted = as.character(.N)),
+                       .(Datum, VonatNem)])[order(Datum, VonatNem)]
 )
 
 TrendAgg$all[, day := factor(

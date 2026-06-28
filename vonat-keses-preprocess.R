@@ -321,7 +321,7 @@ if(!is.null(allomaskoord)) {
 
 ##### Meteorológiai adatok #####
 
-MetData <- tryCatch(rbindlist(lapply(unique(format(unique(ProcData$Datum), "%Y")), function(yr)
+MetData <- tryCatch(rbindlist(lapply(unique(format(unique(trendBase$Datum), "%Y")), function(yr)
   fread(paste0("https://data.meteostat.net/daily/", yr, "/12840.csv.gz")))), error = function(e) {
     print(e)
     return(NULL)

@@ -1239,7 +1239,7 @@ server <- function(input, output, session) {
         enableDoubleClickZoom = TRUE,
         mouseWheelSensitivity = 1.3) |>
       hc_add_theme(hc_theme(chart = list(backgroundColor = "white"))) |>
-      hc_title(text = paste0(input$spatialMode, ", ", keseshun(input$spatialMetric, short = TRUE, tolowcase = TRUE), ", ",
+      hc_title(text = paste0(input$spatialMode, ", ", keseshun(input$spatialMetric, short = TRUE, tolowercase = TRUE), ", ",
                              if(input$spatialTimerange[1] == input$spatialTimerange[2]) input$spatialTimerange[1] else
                                paste0(range(input$spatialTimerange), collapse = " - "))) |>
       hc_caption(text = figcap) |>

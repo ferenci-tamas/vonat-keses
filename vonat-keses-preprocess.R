@@ -151,14 +151,14 @@ RawData[VonatSzam %in% c(826, 829)]$VonatNem <- "InterCity" # SOMOGY
 # # 969, 968: ?
 # # 642: úgy tűnik ez tényleg személyvonat, a szám ellenére
 
-RawData[Datum=="2025-08-11"&VonatSzam==2356&Állomás=="Budapest-Nyugati"]$Tényleges.1 <- NA
-RawData[Datum=="2025-08-11"&VonatSzam==2326&Állomás=="Budapest-Nyugati"]$Tényleges.1 <- NA
-RawData[Datum=="2025-08-11"&VonatSzam==2326&Állomás=="Rákosrendező"]$Tényleges <- NA
-RawData[Datum=="2025-08-10"&VonatSzam==2030&Állomás=="Rákosrendező"]$Tényleges <- NA
-RawData[Datum=="2025-09-23"&VonatSzam==2017&Állomás=="Budapest-Nyugati"]$Tényleges <- NA
-RawData[Datum=="2025-07-21"&VonatSzam==16707&Állomás=="Tuzsér"]$Tényleges.1 <- NA
-RawData[Datum=="2025-09-08"&VonatSzam==33&Állomás=="Hajdúszoboszló"]$Tényleges <- NA
-RawData[Datum=="2026-05-26"&VonatSzam==145&Állomás=="Győr"]$Tényleges.1 <- NA
+# RawData[Datum=="2025-08-11"&VonatSzam==2356&Állomás=="Budapest-Nyugati"]$Tényleges.1 <- NA
+# RawData[Datum=="2025-08-11"&VonatSzam==2326&Állomás=="Budapest-Nyugati"]$Tényleges.1 <- NA
+# RawData[Datum=="2025-08-11"&VonatSzam==2326&Állomás=="Rákosrendező"]$Tényleges <- NA
+# RawData[Datum=="2025-08-10"&VonatSzam==2030&Állomás=="Rákosrendező"]$Tényleges <- NA
+# RawData[Datum=="2025-09-23"&VonatSzam==2017&Állomás=="Budapest-Nyugati"]$Tényleges <- NA
+# RawData[Datum=="2025-07-21"&VonatSzam==16707&Állomás=="Tuzsér"]$Tényleges.1 <- NA
+# RawData[Datum=="2025-09-08"&VonatSzam==33&Állomás=="Hajdúszoboszló"]$Tényleges <- NA
+# RawData[Datum=="2026-05-26"&VonatSzam==145&Állomás=="Győr"]$Tényleges.1 <- NA
 
 ProcData <- rbind(
   RawData[

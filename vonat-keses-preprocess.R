@@ -286,7 +286,7 @@ TrendAgg <- list(
 TrendAgg$all[, day := factor(
   lubridate::wday(Datum, week_start = 1),
   levels = 1:7,
-  labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
+  labels = c("Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap")
 )]
 TrendAgg$all[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
                                   lubridate::isoweek(Datum))]

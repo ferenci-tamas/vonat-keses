@@ -150,6 +150,8 @@ statlevels <- c("Megállások száma", "Vonatok száma", "-0", "1-5", "6-10",
                 ">20", "Átlag", "Medián", "75. percentilis",
                 "90. percentilis", "99. percentilis", "Maximum", "Hiányzó")
 
+days_order <- c("Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap")
+
 ui <- navbarPage(
   theme = bslib::bs_theme(bootswatch = "default"),
   title = "Vonatkésési statisztika",
@@ -272,7 +274,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "https://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.40"),
+                  .noWS = "outside"), ", v1.41"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -827,6 +829,7 @@ server <- function(input, output, session) {
                   optionSelectedText = "vonat kiválasztva",
                   optionsSelectedText = "vonat kiválasztva")
               ),
+              checkboxInput("weekPoints", "Egyes hetek megjelenítése"),
               width = 2
             ),
             
@@ -1365,7 +1368,7 @@ server <- function(input, output, session) {
       pd[, day := factor(
         lubridate::wday(Datum, week_start = 1),
         levels = 1:7,
-        labels = c("H", "K", "Sz", "Cs", "P", "Szo", "V")
+        labels = days_order
       )]
       pd[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
                               lubridate::isoweek(Datum))]
@@ -1374,18 +1377,55 @@ server <- function(input, output, session) {
     }
     if(nrow(pd) == 0) return(NULL)
     
-    p <- if(input$weekMetric %in% c(">5", ">20", "Hiányzó")) {
-      hchart(pd, "line", hcaes(x = day, y = value1, group = yearweek)) |>
+    pd_box <- pd[, setNames(as.list(boxplot.stats(value1)$stats),
+                            c("low", "q1", "median", "q3", "high")), .(day)][order(day)]
+    
+    box_data <- lapply(seq_len(nrow(pd_box)), function(i) {
+      list(pd_box$low[i], pd_box$q1[i], pd_box$median[i], pd_box$q3[i], pd_box$high[i])
+    })
+    
+    p <- hchart(box_data, type = "boxplot", name = "Eloszlás", color = "#555555",
+                fillColor = "transparent", showInLegend = FALSE)
+    
+    if(input$weekMetric %in% c(">5", ">20", "Hiányzó")) {
+      p <- p |>
         hc_yAxis(title = list(text = "Arány [%]")) |>
         hc_tooltip(valueDecimals = 1, valueSuffix = " %")
     } else {
-      hchart(pd, "line", hcaes(x = day, y = value1, group = yearweek)) |>
+      p <- p |>
         hc_yAxis(title = list(text = "Késési idő [perc]")) |>
         hc_tooltip(valueDecimals = 2, valueSuffix = " perc")
     }
     
+    if(input$weekPoints) {
+      p <- p |> hc_add_series(pd, "point", name = "Egyes hetek adatai",
+                              hcaes(x = day, y = value1, yearweek = yearweek),
+                              color = "#aaaaaa", showInLegend = FALSE)
+    }
+    
     p <- p |>
-      hc_xAxis(type = "category", categories = c("H", "K", "Sz", "Cs", "P", "Szo", "V")) |>
+      hc_plotOptions(
+        boxplot = list(
+          tooltip = list(
+            headerFormat = "<b>{point.key}</b><br/>",
+            pointFormat = paste0(
+              "Maximum: {point.high}<br/>",
+              "Felső kvartilis: {point.q3}<br/>",
+              "Medián: {point.median}<br/>",
+              "Alsó kvartilis: {point.q1}<br/>",
+              "Minimum: {point.low}<br/>"
+            )
+          )
+        ),
+        scatter = list(
+          jitter = list(x = 0.05, y = 0), opacity = 0.4,
+          tooltip = list(pointFormatter = JS(if(input$weekMetric %in% c(">5", ">20", "Hiányzó"))
+            "function() { return '<b>' + this.yearweek + '</b>: ' + Highcharts.numberFormat(this.y, 1) + '%'; }"
+            else
+              "function() { return '<b>' + this.yearweek + '</b>: ' + Highcharts.numberFormat(this.y, 2) + ' perc'; }"
+          )))
+      ) |>
+      hc_xAxis(type = "category", categories = days_order) |>
       hc_title(text = paste0(
         keseshun(input$weekMetric),
         if(input$weekVonatSzam == "Kiválasztott") paste0(", ", paste0(names(choices$VonatNev[choices$VonatNev %in% input$weekVonatSzamSel]), collapse = ", ")) else "",

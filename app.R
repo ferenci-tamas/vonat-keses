@@ -150,6 +150,8 @@ statlevels <- c("Megállások száma", "Vonatok száma", "-0", "1-5", "6-10",
 
 days_order <- c("Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap")
 
+minstohhmm <- function(x) ifelse(is.na(x), NA, sprintf("%02d:%02d", x %/% 60, x %% 60))
+
 ui <- navbarPage(
   theme = bslib::bs_theme(bootswatch = "default"),
   title = "Vonatkésési statisztika",
@@ -272,7 +274,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "https://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v2.00"),
+                  .noWS = "outside"), ", v2.01"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -1398,14 +1400,14 @@ server <- function(input, output, session) {
     pd <- pd |> dplyr::filter(VonatNem %in% input$databaseVonatNem)
     
     if(input$databaseMode == "Nyers adatok") {
-      pd <- pd |> dplyr::filter(Állomás %in% input$databaseAllomas) |>
+      pd <- pd |> dplyr::filter(Allomas %in% input$databaseAllomas) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
-                   `Vonatnem` = VonatNem, Allomás,
-                   `Menetrend szerinti érkezés` = Menetrend.szerint,
-                   `Tényleges érkezés` = Tenyleges,
-                   `Menetrend szerinti indulás` = Menetrend.szerint.1,
-                   `Tényleges indulás` = Tenyleges.1)]
+                   `Vonatnem` = VonatNem, `Állomás` = Allomas,
+                   `Menetrend szerinti érkezés` = minstohhmm(Menetrend.szerint),
+                   `Tényleges érkezés` = minstohhmm(Tenyleges),
+                   `Menetrend szerinti indulás` = minstohhmm(Menetrend.szerint.1),
+                   `Tényleges indulás` = minstohhmm(Tenyleges.1))]
     } else if(input$databaseMode == "Nyíltvonali késés") {
       pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |>
         dplyr::filter(Allomas %in% input$databaseAllomas |
@@ -1423,11 +1425,11 @@ server <- function(input, output, session) {
                    `Vonatnem` = VonatNem,
                    `Állomás` = Allomas, `Késés` = AllomasKeses)]
     } else if(input$databaseMode == "Teljes késés") {
-      pd <- pd |> dplyr::filter(Erkezo %in% input$databaseAllomas) |>
+      pd <- pd |> dplyr::filter(Allomas %in% input$databaseAllomas) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
                    `Vonatnem` = VonatNem,
-                   `Állomás` = Erkezo, `Késés` = KumKeses)]
+                   `Állomás` = Allomas, `Késés` = KumKeses)]
     } else if(input$databaseMode == "Állomási késés") {
       pd <- pd |> dplyr::filter(Tipus == "KozbensoAllomas") |>
         dplyr::filter(Allomas %in% input$databaseAllomas) |>
@@ -1552,7 +1554,7 @@ server <- function(input, output, session) {
       pd <- rbind(
         pd |> dplyr::filter(Tipus == "InduloAllomas") |>
           dplyr::filter(Allomas == input$trafficTrendAllomas) |>
-          dplyr::mutate(Allomas = as.character(Indulo)) |>
+          dplyr::mutate(Allomas = as.character(Allomas)) |>
           dplyr::group_by(Datum, Allomas) |>
           dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Induló vonat") |> as.data.table(),

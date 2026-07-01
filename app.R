@@ -58,7 +58,6 @@ hc_exporting_hu <- function(...) {
 }
 # source("hw_grid.R")
 
-delayedAssign("ProcData", arrow::open_dataset(list.files("./data/", "ProcData*", full.names = TRUE), format = "feather"))
 delayedAssign("RawData", arrow::open_dataset(list.files("./data/", "RawData*", full.names = TRUE), format = "feather"))
 
 daterange <- readRDS("./data/daterange.rds")
@@ -116,9 +115,8 @@ corrVariables <- data.table(
 source("utils.R")
 
 expandlatlon <- function(dat) {
-  if("Indulo" %in% colnames(dat)) dat <- merge(dat, allomaskoord[, .(Indulo = Allomas, InduloLat = lat, InduloLong = lon)], by = "Indulo", sort = FALSE)
-  if("Erkezo" %in% colnames(dat)) dat <- merge(dat, allomaskoord[, .(Erkezo = Allomas, ErkezoLat = lat, ErkezoLong = lon)], by = "Erkezo", sort = FALSE)
   if("Allomas" %in% colnames(dat)) dat <- merge(dat, allomaskoord[, .(Allomas, AllomasLat = lat, AllomasLong = lon)], by = "Allomas", sort = FALSE)
+  if("ElozoAllomas" %in% colnames(dat)) dat <- merge(dat, allomaskoord[, .(ElozoAllomas = Allomas, ElozoAllomasLat = lat, ElozoAllomasLong = lon)], by = "ElozoAllomas", sort = FALSE)
   dat
 }
 
@@ -274,7 +272,7 @@ ui <- navbarPage(
     ")),
     hr(),
     p("Írta: ", a("Ferenci Tamás", href = "https://www.medstat.hu/", target = "_blank",
-                  .noWS = "outside"), ", v1.41"),
+                  .noWS = "outside"), ", v2.00"),
     
     tags$script(HTML("
       var sc_project=13147854;
@@ -316,6 +314,9 @@ ui <- navbarPage(
     tabPanel("Napi eloszlások", value = "distr",
              uiOutput("distrContent")),
     
+    tabPanel("Napi mintázat", value = "day",
+             uiOutput("dayContent")),
+    
     tabPanel("Heti mintázat", value = "week",
              uiOutput("weekContent")),
     
@@ -337,6 +338,10 @@ server <- function(input, output, session) {
   })
   observeEvent(input$gotoDistr, {
     updateNavbarPage(session, "main", selected = "distr")
+    session$sendCustomMessage("closeNavbarDropdown", list())
+  })
+  observeEvent(input$gotoDay, {
+    updateNavbarPage(session, "main", selected = "day")
     session$sendCustomMessage("closeNavbarDropdown", list())
   })
   observeEvent(input$gotoWeek, {
@@ -409,7 +414,7 @@ server <- function(input, output, session) {
                 "input.statStation == 'Kiválasztott'",
                 shinyWidgets::virtualSelectInput(
                   "statStationSel", "Kiválasztott vasútállomás",
-                  choices$AllomasErkezo, "Budapest-Keleti",
+                  choices$Allomas, "Budapest-Keleti",
                   multiple = TRUE, search = TRUE,
                   placeholder = "Válasszon",
                   allOptionsSelectedText = "Mindegyik",
@@ -512,7 +517,7 @@ server <- function(input, output, session) {
                   "input.trendStation == 'Kiválasztott'",
                   shinyWidgets::virtualSelectInput(
                     "trendStationSel", "Kiválasztott vasútállomás",
-                    choices$AllomasErkezo, "Budapest-Keleti",
+                    choices$Allomas, "Budapest-Keleti",
                     multiple = TRUE, search = TRUE,
                     placeholder = "Válasszon",
                     allOptionsSelectedText = "Mindegyik",
@@ -697,8 +702,8 @@ server <- function(input, output, session) {
                 optionsSelectedText = "vonat kiválasztva"),
               shinyWidgets::virtualSelectInput(
                 "databaseAllomas", "Állomás",
-                choices$AllomasErkezoIndulo,
-                choices$AllomasErkezoIndulo,
+                choices$Allomas,
+                choices$Allomas,
                 multiple = TRUE, search = TRUE,
                 placeholder = "Válasszon",
                 allOptionsSelectedText = "Mindegyik",
@@ -741,6 +746,104 @@ server <- function(input, output, session) {
             )
           )
         })
+      } else if (currentTab == "day") {
+        output$dayContent <- renderUI({
+          sidebarLayout(
+            sidebarPanel(
+              selectInput(
+                "dayMetric",
+                div("Használt mutató",
+                    bslib::tooltip(
+                      bsicons::bs_icon("question-circle"),
+                      hianyzoExplanation, placement = "left")),
+                c(">5", ">20", "Átlag",
+                  "Medián", "75. percentilis", "90. percentilis",
+                  "99. percentilis", "Maximum", "Hiányzó")),
+              radioButtons("dayTraintype", "Vonatnem",
+                           c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.dayTraintype == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "dayTraintypeSel", "Kiválasztott vonatnem",
+                  choices$VonatNem, "Személyvonat",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "vonatnem kiválasztva",
+                  optionsSelectedText = "vonatnem kiválasztva")
+              ),
+              radioButtons("dayStation", "Vasútállomás",
+                           c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.dayStation == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "dayStationSel", "Kiválasztott vasútállomás",
+                  choices$Allomas, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
+              radioButtons("dayKiindulasi", "Vonat kiindulási állomása",
+                           c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.dayKiindulasi == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "dayKiindulasiSel", "Kiválasztott vasútállomás",
+                  choices$AllomasKiindulasi, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
+              radioButtons("dayCel", "Vonat célállomása",
+                           c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.dayCel == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "dayCelSel", "Kiválasztott vasútállomás",
+                  choices$AllomasKiindulasi, "Budapest-Keleti",
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "állomás kiválasztva",
+                  optionsSelectedText = "állomás kiválasztva")
+              ),
+              radioButtons(
+                "dayVonatSzam",
+                div("Vonat",
+                    bslib::tooltip(
+                      bsicons::bs_icon("question-circle"),
+                      vonatszamExplanation, placement = "left")),
+                c("Összes egyben", "Kiválasztott")),
+              conditionalPanel(
+                "input.dayVonatSzam == 'Kiválasztott'",
+                shinyWidgets::virtualSelectInput(
+                  "dayVonatSzamSel", "Kiválasztott vonat",
+                  choices$VonatNev,
+                  multiple = TRUE, search = TRUE,
+                  placeholder = "Válasszon",
+                  allOptionsSelectedText = "Mindegyik",
+                  searchPlaceholderText = "Keresés",
+                  optionSelectedText = "vonat kiválasztva",
+                  optionsSelectedText = "vonat kiválasztva")
+              ),
+              checkboxInput("dayPoints", "Egyes napok megjelenítése"),
+              width = 2
+            ),
+            
+            mainPanel(
+              shinycssloaders::withSpinner(highchartOutput("dayOutput", height = "calc(100vh - 180px)")),
+              width = 10
+            )
+          )
+        })
       } else if (currentTab == "week") {
         output$weekContent <- renderUI({
           sidebarLayout(
@@ -774,7 +877,7 @@ server <- function(input, output, session) {
                 "input.weekStation == 'Kiválasztott'",
                 shinyWidgets::virtualSelectInput(
                   "weekStationSel", "Kiválasztott vasútállomás",
-                  choices$AllomasErkezo, "Budapest-Keleti",
+                  choices$Allomas, "Budapest-Keleti",
                   multiple = TRUE, search = TRUE,
                   placeholder = "Válasszon",
                   allOptionsSelectedText = "Mindegyik",
@@ -849,7 +952,7 @@ server <- function(input, output, session) {
                 "input.trafficMode == 'Időbeli trend'",
                 shinyWidgets::virtualSelectInput(
                   "trafficTrendAllomas", "Állomás",
-                  choices$AllomasErkezoIndulo,
+                  choices$Allomas,
                   "Budapest-Keleti",
                   multiple = FALSE, search = TRUE,
                   placeholder = "Válasszon",
@@ -935,7 +1038,7 @@ server <- function(input, output, session) {
     byvars <- character()
     if(input$timeTableStratTime == "Naponként") byvars <- c(byvars, c("Dátum" = "Datum"))
     if(input$statTraintype != "Összes egyben") byvars <- c(byvars, c("Vonatnem" = "VonatNem"))
-    if(input$statStation != "Összes egyben") byvars <- c(byvars, c("Állomás" = "Erkezo"))
+    if(input$statStation != "Összes egyben") byvars <- c(byvars, c("Állomás" = "Allomas"))
     if(input$statKiindulasi != "Összes egyben") byvars <- c(byvars, c("Kiindulási állomás" = "Kiindulasi"))
     if(input$statCel != "Összes egyben") byvars <- c(byvars, c("Célállomás" = "Cel"))
     if(input$statVonatSzam != "Összes egyben") byvars <- c(byvars, c("Vonat" = "VonatNevLabel"))
@@ -971,22 +1074,21 @@ server <- function(input, output, session) {
     } else {
       pd <- switch(
         input$timeTime,
-        "Utolsó nap" = ProcData |> dplyr::filter(Datum == maxdate),
-        "Utolsó hét" = ProcData |> dplyr::filter(Datum >= cutoff7),
-        "Utolsó hónap" = ProcData |> dplyr::filter(Datum >= cutoff30),
+        "Utolsó nap" = RawData |> dplyr::filter(Datum == maxdate),
+        "Utolsó hét" = RawData |> dplyr::filter(Datum >= cutoff7),
+        "Utolsó hónap" = RawData |> dplyr::filter(Datum >= cutoff30),
         "Egyéni nap vagy intervallum" = if(length(input$timeTableCustomDate) == 1)
-          ProcData |> dplyr::filter(Datum == input$timeTableCustomDate) else
-            ProcData |> dplyr::filter(Datum >= input$timeTableCustomDate[1] &
-                                        Datum <= input$timeTableCustomDate[2])
+          RawData |> dplyr::filter(Datum == input$timeTableCustomDate) else
+            RawData |> dplyr::filter(Datum >= input$timeTableCustomDate[1] &
+                                       Datum <= input$timeTableCustomDate[2])
       )
       
-      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
-        dplyr::collect() |> setDT()
+      pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |> dplyr::collect() |> setDT()
       
       daterange <- range(pd$Datum)
       
       if(input$statTraintype == "Kiválasztott") pd <- pd[VonatNem %in% input$statTraintypeSel]
-      if(input$statStation == "Kiválasztott") pd <- pd[Erkezo %in% input$statStationSel]
+      if(input$statStation == "Kiválasztott") pd <- pd[Allomas %in% input$statStationSel]
       if(input$statKiindulasi == "Kiválasztott") pd <- pd[Kiindulasi %in% input$statKiindulasiSel]
       if(input$statCel == "Kiválasztott") pd <- pd[Cel %in% input$statCelSel]
       if(input$statVonatSzam == "Kiválasztott") pd <- pd[VonatSzam %in% input$statVonatSzamSel]
@@ -1066,17 +1168,16 @@ server <- function(input, output, session) {
       else
         TrendAgg$all[stat %in% statsNeeded]
     } else {
-      pd <- ProcData
+      pd <- RawData
       if(input$trendTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$trendTraintypeSel)
-      if(input$trendStation    == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$trendStationSel)
+      if(input$trendStation    == "Kiválasztott") pd <- pd |> dplyr::filter(Allomas %in% input$trendStationSel)
       if(input$trendKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$trendKiindulasiSel)
       if(input$trendCel        == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$trendCelSel)
       if(input$trendVonatSzam  == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$trendVonatSzamSel)
       
       byvars <- if(input$trendTraintype == "Lebontás") c("Datum", "VonatNem") else "Datum"
       
-      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
-        dplyr::collect() |> setDT()
+      pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |> dplyr::collect() |> setDT()
       pd <- pd[, kesesstat(KumKeses, metricsel), byvars][order(Datum)]
     }
     if(nrow(pd) == 0) return(NULL)
@@ -1154,73 +1255,73 @@ server <- function(input, output, session) {
   })
   
   output$spatialOutput <- renderHighchart({
-    pd <- ProcData |> dplyr::filter(Datum >= input$spatialTimerange[1] &
-                                      Datum <= input$spatialTimerange[2])
+    pd <- RawData |> dplyr::filter(Datum >= input$spatialTimerange[1] &
+                                     Datum <= input$spatialTimerange[2])
     
     p <- highchart(type = "map") |>
       hc_chart(type = "map") |>
       hc_add_series(mapData = mapdata, showInLegend = FALSE)
     
     if(input$spatialMode == "Teljes késés") {
-      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+      pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |>
         dplyr::collect() |> setDT()
       pd <- expandlatlon(pd[, kesesstat(KumKeses, input$spatialMetric),
-                            .(Erkezo)])
+                            .(Allomas)])
       p <- p |>
-        hc_add_series(data = pd[, .(Erkezo, value1, lat = ErkezoLat,
-                                    lon = ErkezoLong)],
+        hc_add_series(data = pd[, .(Allomas, value1, lat = AllomasLat,
+                                    lon = AllomasLong)],
                       type = "mappoint", colorKey = "value1",
                       showInLegend = FALSE) |>
         hc_colorAxis(min = min(pd$value1, na.rm = TRUE),
                      max = max(pd$value1, na.rm = TRUE),
                      minColor = "blue", maxColor = "red",
                      stops = colstops) |>
-        hc_tooltip(headerFormat = "<b>{point.point.Erkezo}</b><br>")
+        hc_tooltip(headerFormat = "<b>{point.point.Allomas}</b><br>")
     } else if(input$spatialMode == "Indulási késés") {
       pd <- pd |> dplyr::filter(Tipus == "InduloAllomas") |>
         dplyr::collect() |> setDT()
-      pd <- expandlatlon(pd[, kesesstat(Keses, input$spatialMetric),
-                            .(Indulo)])
+      pd <- expandlatlon(pd[, kesesstat(AllomasKeses, input$spatialMetric),
+                            .(Allomas)])
       p <- p |>
-        hc_add_series(data = pd[, .(Indulo, value1, lat = InduloLat,
-                                    lon = InduloLong)],
+        hc_add_series(data = pd[, .(Allomas, value1, lat = AllomasLat,
+                                    lon = AllomasLong)],
                       type = "mappoint", colorKey = "value1",
                       showInLegend = FALSE) |>
         hc_colorAxis(min = min(pd$value1, na.rm = TRUE),
                      max = max(pd$value1, na.rm = TRUE),
                      minColor = "blue", maxColor = "red",
                      stops = colstops) |>
-        hc_tooltip(headerFormat = "<b>{point.point.Indulo}</b><br>")
+        hc_tooltip(headerFormat = "<b>{point.point.Allomas}</b><br>")
     } else if(input$spatialMode == "Állomási késés") {
       pd <- pd |> dplyr::filter(Tipus == "KozbensoAllomas") |>
         dplyr::collect() |> setDT()
-      pd <- expandlatlon(pd[, kesesstat(Keses, input$spatialMetric),
-                            .(Erkezo)])
+      pd <- expandlatlon(pd[, kesesstat(AllomasKeses, input$spatialMetric),
+                            .(Allomas)])
       p <- p |>
-        hc_add_series(data = pd[, .(Erkezo, value1, lat = ErkezoLat,
-                                    lon = ErkezoLong)],
+        hc_add_series(data = pd[, .(Allomas, value1, lat = AllomasLat,
+                                    lon = AllomasLong)],
                       type = "mappoint", colorKey = "value1",
                       showInLegend = FALSE) |>
         hc_colorAxis(min = min(pd$value1, na.rm = TRUE),
                      max = max(pd$value1, na.rm = TRUE),
                      minColor = "blue", maxColor = "red",
                      stops = colstops) |>
-        hc_tooltip(headerFormat = "<b>{point.point.Erkezo}</b><br>")
+        hc_tooltip(headerFormat = "<b>{point.point.Allomas}</b><br>")
     } else if(input$spatialMode == "Nyíltvonali késés") {
-      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+      pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |>
         dplyr::collect() |> setDT()
-      pd <- expandlatlon(pd[, kesesstat(Keses, input$spatialMetric),
-                            .(Indulo, Erkezo)])
+      pd <- expandlatlon(pd[, kesesstat(SzakaszKeses, input$spatialMetric),
+                            .(Allomas, ElozoAllomas)])
       dat <- lapply(1:nrow(pd), function(i) {
         list(
           value1 = pd$value1[i],
-          Indulo = pd$Indulo[i],
-          Erkezo = pd$Erkezo[i],
+          ElozoAllomas = pd$ElozoAllomas[i],
+          Allomas = pd$Allomas[i],
           geometry = list(
             type = "LineString",
             coordinates = list(
-              c(pd$InduloLong[i], pd$InduloLat[i]),
-              c(pd$ErkezoLong[i], pd$ErkezoLat[i])
+              c(pd$ElozoAllomasLong[i], pd$ElozoAllomasLat[i]),
+              c(pd$AllomasLong[i], pd$AllomasLat[i])
             )
           )
         )
@@ -1234,7 +1335,7 @@ server <- function(input, output, session) {
                      max = max(pd$value1, na.rm = TRUE),
                      minColor = "blue", maxColor = "red",
                      stops = colstops) |>
-        hc_tooltip(headerFormat = "<b>{point.Indulo}</b> - <b>{point.Erkezo}</b><br>") |>
+        hc_tooltip(headerFormat = "<b>{point.ElozoAllomas}</b> - <b>{point.Allomas}</b><br>") |>
         hc_plotOptions(mapline = list(lineWidth = 2))
     }
     
@@ -1256,8 +1357,8 @@ server <- function(input, output, session) {
   })
   
   output$distrOutput <- renderHighchart({
-    dat <- ProcData |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz") & Datum >= input$distrDate[1] &
-                                       Datum <= input$distrDate[2] & !is.na(KumKeses))
+    dat <- RawData |> dplyr::filter(Tipus != "InduloAllomas" & Datum >= input$distrDate[1] &
+                                      Datum <= input$distrDate[2] & !is.na(KumKeses))
     if(input$distrLog) dat <- dat |> dplyr::filter(KumKeses > 0)
     
     dat <- dat |> dplyr::collect() |> setDT()
@@ -1288,7 +1389,7 @@ server <- function(input, output, session) {
   })
   
   output$databaseOutput <- DT::renderDT({
-    pd <- if(input$databaseMode == "Nyers adatok") RawData else ProcData
+    pd <- RawData
     pd <- if(length(input$databaseDate) == 2)
       pd |> dplyr::filter(Datum >= input$databaseDate[1] &
                             Datum <= input$databaseDate[2]) else
@@ -1300,41 +1401,40 @@ server <- function(input, output, session) {
       pd <- pd |> dplyr::filter(Állomás %in% input$databaseAllomas) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
-                   `Vonatnem` = VonatNem, Állomás,
+                   `Vonatnem` = VonatNem, Allomás,
                    `Menetrend szerinti érkezés` = Menetrend.szerint,
-                   `Tényleges érkezés` = Tényleges,
+                   `Tényleges érkezés` = Tenyleges,
                    `Menetrend szerinti indulás` = Menetrend.szerint.1,
-                   `Tényleges indulás` = Tényleges.1)]
+                   `Tényleges indulás` = Tenyleges.1)]
     } else if(input$databaseMode == "Nyíltvonali késés") {
-      pd <- pd |> dplyr::filter(Indulo %in% input$databaseAllomas |
-                                  Erkezo %in% input$databaseAllomas) |>
-        dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
+      pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |>
+        dplyr::filter(Allomas %in% input$databaseAllomas |
+                        ElozoAllomas %in% input$databaseAllomas) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
                    `Vonatnem` = VonatNem,
-                   `Induló állomás` = Indulo,
-                   `Érkező állomás` = Erkezo, `Késés` = Keses)]
+                   `Induló állomás` = ElozoAllomas,
+                   `Érkező állomás` = Allomas, `Késés` = SzakaszKeses)]
     } else if(input$databaseMode == "Indulási késés") {
-      pd <- pd |> dplyr::filter(Indulo %in% input$databaseAllomas) |>
-        dplyr::filter(Tipus == "InduloAllomas") |>
+      pd <- pd |> dplyr::filter(Tipus == "InduloAllomas") |>
+        dplyr::filter(Allomas %in% input$databaseAllomas) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
                    `Vonatnem` = VonatNem,
-                   `Állomás` = Indulo, `Késés` = Keses)]
+                   `Állomás` = Allomas, `Késés` = AllomasKeses)]
     } else if(input$databaseMode == "Teljes késés") {
       pd <- pd |> dplyr::filter(Erkezo %in% input$databaseAllomas) |>
-        dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
                    `Vonatnem` = VonatNem,
                    `Állomás` = Erkezo, `Késés` = KumKeses)]
     } else if(input$databaseMode == "Állomási késés") {
-      pd <- pd |> dplyr::filter(Erkezo %in% input$databaseAllomas) |>
-        dplyr::filter(Tipus == "KozbensoAllomas") |>
+      pd <- pd |> dplyr::filter(Tipus == "KozbensoAllomas") |>
+        dplyr::filter(Allomas %in% input$databaseAllomas) |>
         dplyr::collect() |> setDT()
       pd <- pd[, .(`Dátum` = Datum, Vonat = VonatNev,
                    `Vonatnem` = VonatNem,
-                   `Állomás` = Erkezo, `Késés` = Keses)]
+                   `Állomás` = Allomas, `Késés` = AllomasKeses)]
     }
     DT::datatable(pd, rownames = FALSE, #filter = "top",
                   extensions = "Buttons", selection = "single",
@@ -1342,6 +1442,10 @@ server <- function(input, output, session) {
                     language = list(url = dt18nurl),
                     dom = "lfrtipB", #pageLength = 20,
                     buttons = c("copy", "csv", "excel", "print")))
+  })
+  
+  output$dayOutput <- renderHighchart({
+    return(NULL)
   })
   
   output$weekOutput <- renderHighchart({
@@ -1354,16 +1458,15 @@ server <- function(input, output, session) {
     if (!useFilter) {
       pd <- TrendAgg$all[stat == input$weekMetric]
     } else {
-      pd <- ProcData
+      pd <- RawData
       
       if(input$weekTraintype == "Kiválasztott") pd <- pd |> dplyr::filter(VonatNem %in% input$weekTraintypeSel)
-      if(input$weekStation == "Kiválasztott") pd <- pd |> dplyr::filter(Erkezo %in% input$weekStationSel)
+      if(input$weekStation == "Kiválasztott") pd <- pd |> dplyr::filter(Allomas %in% input$weekStationSel)
       if(input$weekKiindulasi == "Kiválasztott") pd <- pd |> dplyr::filter(Kiindulasi %in% input$weekKiindulasiSel)
       if(input$weekCel == "Kiválasztott") pd <- pd |> dplyr::filter(Cel %in% input$weekCelSel)
       if(input$weekVonatSzam == "Kiválasztott") pd <- pd |> dplyr::filter(VonatSzam %in% input$weekVonatSzamSel)
       
-      pd <- pd |> dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
-        dplyr::collect() |> setDT()
+      pd <- pd |> dplyr::filter(Tipus != "InduloAllomas") |> dplyr::collect() |> setDT()
       
       pd[, day := factor(
         lubridate::wday(Datum, week_start = 1),
@@ -1444,25 +1547,25 @@ server <- function(input, output, session) {
   
   output$trafficOutput <- renderHighchart({
     if(input$trafficMode == "Időbeli trend") {
-      pd <- ProcData |> dplyr::filter(Datum != "2025-06-11")
+      pd <- RawData |> dplyr::filter(Datum != "2025-06-11")
       
       pd <- rbind(
         pd |> dplyr::filter(Tipus == "InduloAllomas") |>
-          dplyr::filter(Indulo == input$trafficTrendAllomas) |>
-          dplyr::mutate(Indulo = as.character(Indulo)) |>
-          dplyr::group_by(Datum, Allomas = Indulo) |>
+          dplyr::filter(Allomas == input$trafficTrendAllomas) |>
+          dplyr::mutate(Allomas = as.character(Indulo)) |>
+          dplyr::group_by(Datum, Allomas) |>
           dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Induló vonat") |> as.data.table(),
-        pd |> dplyr::filter(Tipus == "Szakasz") |> 
-          dplyr::filter(Erkezo == input$trafficTrendAllomas) |>
-          dplyr::mutate(Erkezo = as.character(Erkezo)) |>
-          dplyr::group_by(Datum, Allomas = Erkezo) |>
+        pd |> dplyr::filter(Tipus == "KozbensoAllomas") |> 
+          dplyr::filter(Allomas == input$trafficTrendAllomas) |>
+          dplyr::mutate(Allomas = as.character(Allomas)) |>
+          dplyr::group_by(Datum, Allomas) |>
           dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Átmenő vonat") |> as.data.table(),
-        pd |> dplyr::filter(Tipus == "ZaroSzakasz") |>
-          dplyr::filter(Erkezo == input$trafficTrendAllomas) |>
-          dplyr::mutate(Erkezo = as.character(Erkezo)) |>
-          dplyr::group_by(Datum, Allomas = Erkezo) |>
+        pd |> dplyr::filter(Tipus == "VegAllomas") |>
+          dplyr::filter(Allomas == input$trafficTrendAllomas) |>
+          dplyr::mutate(Allomas = as.character(Allomas)) |>
+          dplyr::group_by(Datum, Allomas) |>
           dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Érkező vonat") |> as.data.table()
       )[order(Datum)]
@@ -1492,21 +1595,21 @@ server <- function(input, output, session) {
         hc_credits(enabled = TRUE) |>
         hc_exporting_hu(chartOptions = list(navigator = list(enabled = FALSE)))
     } else if(input$trafficMode == "Térkép") {
-      pd <- ProcData |> dplyr::filter(Datum >= input$trafficMapDate[1] &
-                                        Datum <= input$trafficMapDate[2])
+      pd <- RawData |> dplyr::filter(Datum >= input$trafficMapDate[1] &
+                                       Datum <= input$trafficMapDate[2])
       pd <- switch(
         input$trafficMapType,
         "Induló vonat" = pd |> dplyr::filter(Tipus == "InduloAllomas") |> 
-          dplyr::mutate(Indulo = as.character(Indulo)) |>
-          dplyr::group_by(Allomas = Indulo) |> dplyr::summarise(N = dplyr::n()) |> 
+          dplyr::mutate(Allomas = as.character(Allomas)) |>
+          dplyr::group_by(Allomas) |> dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Induló vonat") |> as.data.table(),
-        "Átmenő vonat" = pd |> dplyr::filter(Tipus == "Szakasz") |> 
-          dplyr::mutate(Erkezo = as.character(Erkezo)) |>
-          dplyr::group_by(Allomas = Erkezo) |> dplyr::summarise(N = dplyr::n()) |> 
+        "Átmenő vonat" = pd |> dplyr::filter(Tipus == "KozbensoAllomas") |> 
+          dplyr::mutate(Allomas = as.character(Allomas)) |>
+          dplyr::group_by(Allomas) |> dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Átmenő vonat") |> as.data.table(),
-        "Érkező vonat" = pd |> dplyr::filter(Tipus == "ZaroSzakasz") |> 
-          dplyr::mutate(Erkezo = as.character(Erkezo)) |>
-          dplyr::group_by(Allomas = Erkezo) |> dplyr::summarise(N = dplyr::n()) |> 
+        "Érkező vonat" = pd |> dplyr::filter(Tipus == "VegAllomas") |> 
+          dplyr::mutate(Allomas = as.character(Allomas)) |>
+          dplyr::group_by(Allomas) |> dplyr::summarise(N = dplyr::n()) |> 
           dplyr::mutate(Tipus = "Érkező vonat") |> as.data.table()
       )
       

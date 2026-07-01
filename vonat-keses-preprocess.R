@@ -1,26 +1,33 @@
 library(data.table)
 source("utils.R")
 
-##### ProcData #####
+##### RawData #####
 
 RawData <- rbindlist(lapply(
-  list.files("./data/raw/", paste0("raw", format(Sys.Date(), "%Y%m"), ".*"), full.names = TRUE), function(f)
+  list.files("./data/raw/", full.names = TRUE), function(f)
     rbindlist(readRDS(f), use.names = TRUE, fill = TRUE)),
   use.names = TRUE, fill = TRUE)
+gc()
 
-RawData[Menetrend.szerint == ""]$Menetrend.szerint <- NA
-RawData[Menetrend.szerint.1 == ""]$Menetrend.szerint.1 <- NA
-RawData[Tényleges == ""]$Tényleges <- NA
-RawData[Tényleges.1 == ""]$Tényleges.1 <- NA
-RawData[Várható == ""]$Várható <- NA
-RawData[Várható.1 == ""]$Várható.1 <- NA
-RawData[Km == ""]$Km <- NA
+RawData <- RawData[, .(Km, Allomas = Állomás, Menetrend.szerint,
+                       Menetrend.szerint.1,
+                       Tenyleges = Tényleges, Tenyleges.1 = Tényleges.1,
+                       Vonat, VonatNev = VonatSzam, Datum)]
+gc()
 
-# unique(RawData[is.na(Km)]$Állomás) # mind külföldi kell legyen
-RawData <- RawData[Datum != "2025-07-07" | !Állomás %in% unique(RawData[is.na(Km)]$Állomás)]
+RawData[Menetrend.szerint == "", Menetrend.szerint := NA]
+RawData[Menetrend.szerint.1 == "", Menetrend.szerint.1 := NA]
+RawData[Tenyleges == "", Tenyleges := NA]
+RawData[Tenyleges.1 == "", Tenyleges.1 := NA]
+# RawData[Várható == ""]$Várható <- NA
+# RawData[Várható.1 == ""]$Várható.1 <- NA
+RawData[Km == "", Km := NA]
+
+# unique(RawData[is.na(Km)]$Allomas) # mind külföldi kell legyen
+RawData <- RawData[Datum != "2025-07-07" | Allomas %notin% unique(RawData[is.na(Km)]$Allomas)]
 RawData <- RawData[!is.na(Km)]
 stopifnot(length(which(is.na(as.numeric(RawData$Km)))) == 0)
-RawData$Km <- as.numeric(RawData$Km)
+RawData[, Km := as.numeric(Km)]
 
 alkalmas <- function(x) {
   length(setdiff(unique(nchar(x)), c(NA, 5))) == 0 &&
@@ -31,101 +38,104 @@ alkalmas <- function(x) {
 
 stopifnot(alkalmas(RawData$Menetrend.szerint))
 stopifnot(alkalmas(RawData$Menetrend.szerint.1))
-stopifnot(alkalmas(RawData$Tényleges))
-stopifnot(alkalmas(RawData$Tényleges.1))
+stopifnot(alkalmas(RawData$Tenyleges))
+stopifnot(alkalmas(RawData$Tenyleges.1))
 
-RawData[, Menetrend.szerint.num := as.numeric(substring(Menetrend.szerint, 1, 2)) * 60 + as.numeric(substring(Menetrend.szerint, 4, 5))]
-RawData[, Menetrend.szerint.1.num := as.numeric(substring(Menetrend.szerint.1, 1, 2)) * 60 + as.numeric(substring(Menetrend.szerint.1, 4, 5))]
-RawData[, Tényleges.num := as.numeric(substring(Tényleges, 1, 2)) * 60 + as.numeric(substring(Tényleges, 4, 5))]
-RawData[, Tényleges.1.num := as.numeric(substring(Tényleges.1, 1, 2)) * 60 + as.numeric(substring(Tényleges.1, 4, 5))]
+RawData[, Menetrend.szerint := as.numeric(substring(Menetrend.szerint, 1, 2)) * 60 +
+          as.numeric(substring(Menetrend.szerint, 4, 5))]
+RawData[, Menetrend.szerint.1 := as.numeric(substring(Menetrend.szerint.1, 1, 2)) * 60 +
+          as.numeric(substring(Menetrend.szerint.1, 4, 5))]
+RawData[, Tenyleges := as.numeric(substring(Tenyleges, 1, 2)) * 60 +
+          as.numeric(substring(Tenyleges, 4, 5))]
+RawData[, Tenyleges.1 := as.numeric(substring(Tenyleges.1, 1, 2)) * 60 +
+          as.numeric(substring(Tenyleges.1, 4, 5))]
 
-RawData[Tényleges.1.num - Tényleges.num < 0 & Tényleges.1.num - Tényleges.num >= -720,
-        c("Tényleges", "Tényleges.1", "Tényleges.num", "Tényleges.1.num") := list(NA, NA, NA, NA)]
+RawData[Tenyleges.1 - Tenyleges < 0 & Tenyleges.1 - Tenyleges >= -720,
+        c("Tenyleges", "Tenyleges.1") := list(NA, NA)]
 
-stopifnot(!any(RawData[, .(sum(is.na(Vonat)), sum(!is.na(Vonat))), .(Datum)][, !xor(V1, V2)])) # vagy minden Vonat ki van töltve vagy egy sem egy nap
-# amelyik nap nincs, azt kitöltjük
+# vagy minden Vonat ki van töltve vagy egy sem egy nap amelyik nap nincs, azt kitöltjük
+stopifnot(!any(RawData[, .(sum(is.na(Vonat)), sum(!is.na(Vonat))), .(Datum)][, !xor(V1, V2)])) 
 
 # Ez csak ott kell, ahol unique(RawData[is.na(Vonat)]$Datum) van,
 # ez 2025 közepén pár nap
-# RawData <- merge(RawData, unique(RawData[, .(Datum, VonatSzam)])[, .(VonatSzam, Vonat = 1:.N) , .(Datum)], by = c("Datum", "VonatSzam"))
-# RawData$Vonat <- ifelse(is.na(RawData$Vonat.x), RawData$Vonat.y, RawData$Vonat.x)
-# RawData$Vonat.x <- NULL
-# RawData$Vonat.y <- NULL
+RawData <- merge(RawData, unique(RawData[, .(Datum, VonatNev)])[
+  , .(VonatNev, Vonat = 1:.N) , .(Datum)], by = c("Datum", "VonatNev"))
+RawData$Vonat <- ifelse(is.na(RawData$Vonat.x), RawData$Vonat.y, RawData$Vonat.x)
+RawData$Vonat.x <- NULL
+RawData$Vonat.y <- NULL
 
-stopifnot(nrow(RawData[, .N, .(Datum, Vonat, Állomás)][N > 1]) == 0)
+stopifnot(nrow(RawData[, .N, .(Datum, Vonat, Allomas)][N > 1]) == 0)
 
 RawData <- RawData[, if (.N > 1) .SD, .(Datum, Vonat)]
 
 # ami nincs követve az nem is biztos, hogy aznapi vonat, kivesszük
 # RawData[, .N, .(Datum)]
 
-RawData[, Kovetett := sum(!is.na(Tényleges)) > 0 || sum(!is.na(Tényleges.1)) > 0, .(Datum, Vonat)]
+RawData[, Kovetett := sum(!is.na(Tenyleges)) > 0 || sum(!is.na(Tenyleges.1)) > 0, .(Datum, Vonat)]
 RawData <- RawData[Kovetett == TRUE]
 RawData$Kovetett <- NULL
 
 # RawData[, .N, .(Datum)]
-# plot(N ~ Datum, data = RawData[, .N, .(Datum)], type = "b")
+# plot(N ~ Datum, data = RawData[, .N, .(Datum)], type = "l")
 
-RawData[Állomás == "Bélapátfalvi Cementgyár"]$Állomás <- "Bélapátfalvai Cementgyár"
+RawData[Allomas == "Bélapátfalvi Cementgyár"]$Allomas <- "Bélapátfalvai Cementgyár"
 
-names(RawData)[names(RawData) == "VonatSzam"] <- "VonatNev"
+RawData[, VonatSzam := as.numeric(sub(" .*", "", VonatNev))]
 
-RawData$VonatSzam <- as.numeric(sapply(strsplit(RawData$VonatNev, " "), `[[`, 1))
-
-RawData$VonatNev <- trimws(gsub("[\\s\\h]+", " ", RawData$VonatNev, perl = TRUE))
+RawData[, VonatNev := trimws(gsub("[\\s\\h]+", " ", VonatNev, perl = TRUE))]
 
 # Ez csak 2025-06-11 és 2025-06-20 között kell
-# for(remstr in paste0(", 2025.06.", 11:20, "."))
-#   RawData$VonatNev <- gsub(remstr, "", RawData$VonatNev)
-
-# Ez csak 2025-06-11 és 2025-06-20 között kell
-# temp <- unlist(strsplit(unique(RawData$VonatNev), " "))
-# for(remstr in c(unique(paste0(temp[grep("^S\\d+$", temp)], " ")),
-#                 unique(paste0(temp[grep("^Z\\d+$", temp)], " ")),
-#                 unique(paste0(temp[grep("^G\\d+$", temp)], " ")),
-#                 unique(paste0(temp[grep("^IR\\d+$", temp)], " "))))
-#   RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20",
-#           VonatNev := gsub(remstr, "", VonatNev)]
+for(remstr in paste0(", 2025.06.", 11:20, "."))
+  RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20", VonatNev := gsub(remstr, "", VonatNev)]
+temp <- unlist(strsplit(unique(RawData$VonatNev), " "))
+for(remstr in c(unique(paste0(temp[grep("^S\\d+$", temp)], " ")),
+                unique(paste0(temp[grep("^Z\\d+$", temp)], " ")),
+                unique(paste0(temp[grep("^G\\d+$", temp)], " ")),
+                unique(paste0(temp[grep("^IR\\d+$", temp)], " "))))
+  RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20",
+          VonatNev := gsub(remstr, "", VonatNev)]
+rm(temp)
 
 RawData[, VonatNev := gsub("TramTrain 1", "TramTrain", VonatNev)]
 
 RawData <- merge(RawData,
-                 rbindlist(lapply(list.files("./data/", "RawData*", full.names = TRUE), arrow::read_feather))[
-                   , .(VonatNevLabel = names(sort(table(VonatNev), decreasing = TRUE))[1]), .(VonatSzam)],
+                 RawData[, .(VonatNevLabel = names(sort(table(VonatNev), decreasing = TRUE))[1]), .(VonatSzam)],
                  by = "VonatSzam", sort = FALSE)
 
-qgrepl <- function(x) grepl(x, RawData$VonatNevLabel, ignore.case = TRUE)
-
-RawData$VonatNem <- rep("Egyéb", nrow(RawData))
-
-RawData$VonatNem[qgrepl("vonatpótló autóbusz")] <- "Vonatpótló autóbusz"
-RawData$VonatNem[qgrepl("személyvonat")] <- "Személyvonat"
-RawData$VonatNem[qgrepl("InterCity")] <- "InterCity"
-RawData$VonatNem[qgrepl("InterRégió")] <- "InterRégió"
-RawData$VonatNem[qgrepl("railjet")] <- "Railjet"
-RawData$VonatNem[qgrepl("railjet xpress")] <- "Railjet xpress"
-RawData$VonatNem[qgrepl("gyorsvonat")] <- "Gyorsvonat"
-RawData$VonatNem[qgrepl("TramTrain")] <- "TramTrain"
-RawData$VonatNem[qgrepl("Expresszvonat")] <- "Expresszvonat"
-RawData$VonatNem[qgrepl("sebesvonat")] <- "Sebesvonat"
-RawData$VonatNem[qgrepl("EuroCity")] <- "EuroCity"
-RawData$VonatNem[qgrepl("EuRegio")] <- "EuRegio"
-RawData$VonatNem[qgrepl("EuroNight")] <- "EuroNight"
-RawData$VonatNem[qgrepl("Night Jet")] <- "Night Jet"
-RawData$VonatNem[qgrepl("Interregional")] <- "Interregional"
-RawData$VonatNem[qgrepl("International")] <- "International"
+RawData[, VonatNem := {
+  vnl <- tolower(VonatNevLabel)
+  fcase(
+    grepl("railjet xpress", vnl, fixed = TRUE), "Railjet xpress",
+    grepl("railjet", vnl, fixed = TRUE), "Railjet",
+    grepl("vonatpótló autóbusz", vnl, fixed = TRUE), "Vonatpótló autóbusz",
+    grepl("személyvonat", vnl, fixed = TRUE), "Személyvonat",
+    grepl("intercity", vnl, fixed = TRUE), "InterCity",
+    grepl("interrégió", vnl, fixed = TRUE), "InterRégió",
+    grepl("gyorsvonat", vnl, fixed = TRUE), "Gyorsvonat",
+    grepl("tramtrain", vnl, fixed = TRUE), "TramTrain",
+    grepl("expresszvonat", vnl, fixed = TRUE), "Expresszvonat",
+    grepl("sebesvonat", vnl, fixed = TRUE), "Sebesvonat",
+    grepl("eurocity", vnl, fixed = TRUE), "EuroCity",
+    grepl("euregio", vnl, fixed = TRUE), "EuRegio",
+    grepl("euronight", vnl, fixed = TRUE), "EuroNight",
+    grepl("night jet", vnl, fixed = TRUE), "Night Jet",
+    grepl("interregional", vnl, fixed = TRUE), "Interregional",
+    grepl("international", vnl, fixed = TRUE), "International",
+    default = "Egyéb"
+  )
+}]
 
 # # unique(RawData[VonatSzam < 100]$VonatNem)
 # # unique(RawData[VonatSzam < 100 & VonatNem == "Egyéb"]$VonatNev)
-# RawData[VonatSzam < 100][grepl("TRAIANUS", VonatNev)]$VonatNem <- "InterCity"
+# # RawData[VonatSzam < 100][grepl("TRAIANUS", VonatNev)]$VonatNem <- "InterCity"
 # 
 # # unique(RawData[VonatSzam >= 100 & VonatSzam < 500]$VonatNem)
 # # unique(RawData[VonatSzam >= 100 & VonatSzam < 500 & VonatNem == "Egyéb"]$VonatNev)
 # # unique(RawData[VonatSzam >= 100 & VonatSzam < 500 & VonatNem == "Személyvonat"]$VonatNev)
-# RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("CORONA", VonatNev)]$VonatNem <- "InterCity"
-# RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("METROPOLITAN", VonatNev)]$VonatNem <- "EuroCity"
-# RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("HERNÁD - ZEMPLÉN", VonatNev)]$VonatNem <- "InterCity"
-# RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("HERNÁD", VonatNev)]$VonatNem <- "InterCity"
+# # RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("CORONA", VonatNev)]$VonatNem <- "InterCity"
+# # RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("METROPOLITAN", VonatNev)]$VonatNem <- "EuroCity"
+# # RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("HERNÁD - ZEMPLÉN", VonatNev)]$VonatNem <- "InterCity"
+# # RawData[VonatSzam >= 100 & VonatSzam < 500][grepl("HERNÁD", VonatNev)]$VonatNem <- "InterCity"
 # # 358 és társai: úgy tűnik ez tényleg személyvonat, a szám ellenére
 
 # # unique(RawData[VonatSzam >= 500 & VonatSzam < 1000]$VonatNem)
@@ -135,13 +145,13 @@ RawData[VonatSzam %in% c(900, 901, 902, 903, 904, 905, 906, 907,
                          908, 909, 913, 914, 915, 916, 918, 919)]$VonatNem <- "InterCity" # BAKONY
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("BAKONY", VonatNev)]$VonatNem <- "InterCity"
 RawData[VonatSzam %in% c(921, 922, 923, 924, 925, 926, 927, 928,
-                         929, 934, 937, 938)]$VonatNem <- "InterCity" # SAVARIA
+                         929, 932, 933, 934, 936, 937, 938)]$VonatNem <- "InterCity" # SAVARIA
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("SAVARIA", VonatNev)]$VonatNem <- "InterCity"
 RawData[VonatSzam %in% c(950, 951, 952, 953, 954, 955, 956, 957,
-                         958, 959, 963, 964, 966, 967)]$VonatNem <- "InterCity" # GÖCSEJ
+                         958, 959, 962, 963, 964, 965, 966, 967)]$VonatNem <- "InterCity" # GÖCSEJ
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("GÖCSEJ", VonatNev)]$VonatNem <- "InterCity"
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("KRESZ GÉZA", VonatNev)]$VonatNem <- "InterCity"
-RawData[VonatSzam %in% c(826, 829)]$VonatNem <- "InterCity" # SOMOGY
+# RawData[VonatSzam %in% c(826, 829)]$VonatNem <- "InterCity" # SOMOGY
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("SOMOGY", VonatNev)]$VonatNem <- "InterCity"
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("RIPPL-RÓNAI", VonatNev)]$VonatNem <- "InterCity"
 # RawData[VonatSzam >= 500 & VonatSzam < 1000][grepl("MECSEK", VonatNev)]$VonatNem <- "InterCity"
@@ -151,94 +161,101 @@ RawData[VonatSzam %in% c(826, 829)]$VonatNem <- "InterCity" # SOMOGY
 # # 969, 968: ?
 # # 642: úgy tűnik ez tényleg személyvonat, a szám ellenére
 
-# RawData[Datum=="2025-08-11"&VonatSzam==2356&Állomás=="Budapest-Nyugati"]$Tényleges.1 <- NA
-# RawData[Datum=="2025-08-11"&VonatSzam==2326&Állomás=="Budapest-Nyugati"]$Tényleges.1 <- NA
-# RawData[Datum=="2025-08-11"&VonatSzam==2326&Állomás=="Rákosrendező"]$Tényleges <- NA
-# RawData[Datum=="2025-08-10"&VonatSzam==2030&Állomás=="Rákosrendező"]$Tényleges <- NA
-# RawData[Datum=="2025-09-23"&VonatSzam==2017&Állomás=="Budapest-Nyugati"]$Tényleges <- NA
-# RawData[Datum=="2025-07-21"&VonatSzam==16707&Állomás=="Tuzsér"]$Tényleges.1 <- NA
-# RawData[Datum=="2025-09-08"&VonatSzam==33&Állomás=="Hajdúszoboszló"]$Tényleges <- NA
-# RawData[Datum=="2026-05-26"&VonatSzam==145&Állomás=="Győr"]$Tényleges.1 <- NA
+# Nyilvánvalóan hibás időpontok javítása
+RawData[Datum == "2025-08-11" & VonatSzam == 2356 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-11" & VonatSzam == 2326 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-11" & VonatSzam == 2326 & Allomas == "Rákosrendező", Tenyleges := NA]
+RawData[Datum == "2025-08-10" & VonatSzam == 2030 & Allomas == "Rákosrendező", Tenyleges := NA]
+RawData[Datum == "2025-09-23" & VonatSzam == 2017 & Allomas == "Budapest-Nyugati", Tenyleges := NA]
+RawData[Datum == "2025-07-21" & VonatSzam == 16707 & Allomas == "Tuzsér", Tenyleges.1 := NA]
+RawData[Datum == "2025-09-08" & VonatSzam == 33 & Allomas == "Hajdúszoboszló", Tenyleges := NA]
+RawData[Datum == "2026-05-26" & VonatSzam == 145 & Allomas == "Győr", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-10" & VonatSzam == 2030 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2026-02-24" & VonatSzam == 9432 & Allomas == "Győr", Tenyleges.1 := NA]
+RawData[Datum == "2025-11-11" & VonatSzam == 654 & Allomas == "Rákoshegy", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-09" & VonatSzam == 2178 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-09" & VonatSzam == 2178 & Allomas == "Rákosrendező", Tenyleges := NA]
+RawData[Datum == "2026-01-10" & VonatSzam == 2534 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2026-01-10" & VonatSzam == 2534 & Allomas == "Rákosrendező", Tenyleges := NA]
+RawData[Datum == "2025-08-05" & VonatSzam == 2334 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-06" & VonatSzam == 2052 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-09-21" & VonatSzam == 804 & Allomas == "Budapest-Keleti", Tenyleges.1 := NA]
+RawData[Datum == "2025-10-19" & VonatSzam == 4921 & Allomas == "Budapest-Kelenföld", Tenyleges.1 := NA]
+RawData[Datum == "2026-02-20" & VonatSzam == 2910 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-05" & VonatSzam == 2034 & Allomas == "Budapest-Nyugati", Tenyleges.1 := NA]
+RawData[Datum == "2025-09-21" & VonatSzam == 814 & Allomas == "Budapest-Keleti", Tenyleges.1 := NA]
+RawData[Datum == "2025-11-06" & VonatSzam == 924 & Allomas == "Budapest-Keleti", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-03" & VonatSzam == 9480 & Allomas == "Győr", Tenyleges.1 := NA]
+RawData[Datum == "2025-08-04" & VonatSzam == 9605 & Allomas == "Győr-Gyárváros", Tenyleges := NA]
+RawData[Datum == "2025-09-08" & VonatSzam == 33 & Allomas == "Hajdúszoboszló", Tenyleges := NA]
+RawData[Datum == "2025-09-08" & VonatSzam == 33 & Allomas == "Hajdúszoboszló", Tenyleges.1 := NA]
+RawData[Datum == "2025-11-11" & VonatSzam == 605 & Allomas == "Debrecen", Tenyleges.1 := NA]
+RawData[Datum == "2026-01-25" & VonatSzam == 9476 & Allomas == "Győr", Tenyleges.1 := NA]
+RawData[Datum == "2026-02-03" & VonatSzam == 3343 & Allomas == "Tápiószentmárton", Tenyleges.1 := NA]
+RawData[Datum == "2026-02-03" & VonatSzam == 3343 & Allomas == "Nagykáta", Tenyleges.1 := NA]
+RawData[Datum == "2026-02-03" & VonatSzam == 3343 & Allomas == "Szentmártonkáta", Tenyleges.1 := NA]
+RawData[Datum == "2026-02-03" & VonatSzam == 3343 & Allomas == "Farmos", Tenyleges := NA]
+RawData[Datum == "2026-02-03" & VonatSzam == 3343 & Allomas == "Tápiószentmárton", Tenyleges := NA]
+RawData[Datum == "2026-02-03" & VonatSzam == 3343 & Allomas == "Nagykáta", Tenyleges := NA]
+RawData[Datum == "2026-04-21" & VonatSzam == 985 & Allomas == "Komárom", Tenyleges := NA]
+RawData[Datum == "2026-04-21" & VonatSzam == 985 & Allomas == "Komárom", Tenyleges.1 := NA]
+RawData[Datum == "2026-04-21" & VonatSzam == 985 & Allomas == "Tatabánya", Tenyleges := NA]
+RawData[Datum == "2026-04-21" & VonatSzam == 985 & Allomas == "Tatabánya", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-17" & VonatSzam == 982 & Allomas == "Tatabánya", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-17" & VonatSzam == 982 & Allomas == "Komárom", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-17" & VonatSzam == 982 & Allomas == "Győr", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-17" & VonatSzam == 982 & Allomas == "Tatabánya", Tenyleges := NA]
+RawData[Datum == "2026-06-17" & VonatSzam == 982 & Allomas == "Komárom", Tenyleges := NA]
+RawData[Datum == "2026-06-17" & VonatSzam == 982 & Allomas == "Győr", Tenyleges := NA]
+RawData[Datum == "2026-06-24" & VonatSzam == 994 & Allomas == "Tatabánya", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-24" & VonatSzam == 994 & Allomas == "Komárom", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-24" & VonatSzam == 994 & Allomas == "Gyõr", Tenyleges.1 := NA]
+RawData[Datum == "2026-06-24" & VonatSzam == 994 & Allomas == "Tatabánya", Tenyleges := NA]
+RawData[Datum == "2026-06-24" & VonatSzam == 994 & Allomas == "Komárom", Tenyleges := NA]
+RawData[Datum == "2026-06-24" & VonatSzam == 994 & Allomas == "Gyõr", Tenyleges := NA]
+RawData[Datum == "2025-08-06" & VonatSzam == 33120 & Allomas == "Szeged, Pulz utca", Tenyleges := NA]
+RawData[Datum == "2025-08-06" & VonatSzam == 33120 & Allomas == "Szeged, Pulz utca", Tenyleges.1 := NA]
+RawData[Datum == "2026-01-09" & VonatSzam == 165 & Allomas == "Tatabánya", Tenyleges := NA]
 
-ProcData <- rbind(
-  RawData[
-    , .(KmIndulo = Km[1], KmErkezo = Km[1], Indulo = Állomás[1],
-        Erkezo = Állomás[1], Nominalis = 0, KumNominalis = 0,
-        Tenyleges = Tényleges.1.num[1] - Menetrend.szerint.1.num[1],
-        KumTenyleges = Tényleges.1.num[1] - Menetrend.szerint.1.num[1],
-        Tipus = "InduloAllomas", ord = 1),
-    .(Datum, Vonat, VonatSzam, VonatNev, VonatNevLabel, VonatNem)][!is.na(ord)],
-  RawData[
-    , .(KmIndulo = Km[-length(Km)], KmErkezo = Km[-1],
-        Indulo = Állomás[-length(Állomás)],
-        Erkezo = Állomás[-1],
-        Nominalis = Menetrend.szerint.num[-1] - Menetrend.szerint.1.num[-length(Menetrend.szerint.1.num)],
-        KumNominalis = Menetrend.szerint.num[-1] - Menetrend.szerint.1.num[1],
-        Tenyleges = Tényleges.num[-1] - Tényleges.1.num[-length(Tényleges.1.num)],
-        KumTenyleges = Tényleges.num[-1] - Menetrend.szerint.1.num[1],
-        Tipus = c(rep("Szakasz", .N - 2), "ZaroSzakasz"),
-        ord = seq(2, by = 2, length.out = .N - 1)),
-    .(Datum, Vonat, VonatSzam, VonatNev, VonatNevLabel, VonatNem)][!is.na(ord)],
-  RawData[
-    , .(KmIndulo = Km[-c(1, .N)], KmErkezo = Km[-c(1, .N)],
-        Indulo = Állomás[-c(1, .N)],
-        Erkezo = Állomás[-c(1, .N)],
-        Nominalis = Menetrend.szerint.1.num[-c(1, .N)] - Menetrend.szerint.num[-c(1, .N)],
-        KumNominalis = Menetrend.szerint.1.num[-c(1, .N)] - Menetrend.szerint.1.num[1],
-        Tenyleges = Tényleges.1.num[-c(1, .N)] - Tényleges.num[-c(1, .N)],
-        KumTenyleges = Tényleges.1.num[-c(1, .N)] - Menetrend.szerint.1.num[1],
-        Tipus = "KozbensoAllomas",
-        ord = seq(3, by = 2, length.out = .N - 2)),
-    .(Datum, Vonat, VonatSzam, VonatNev, VonatNevLabel, VonatNem)][!is.na(ord)])[order(Datum, Vonat, VonatNev, ord)]
+RawData[, `:=`(
+  Tipus = c("InduloAllomas", rep("KozbensoAllomas", .N - 2), "VegAllomas"),
+  AllomasKeses = c(Tenyleges.1[1] - Menetrend.szerint.1[1],
+                   (Tenyleges.1[-1] - Tenyleges[-1]) - (Menetrend.szerint.1[-1] - Menetrend.szerint[-1])),
+  SzakaszKeses = c(NA, (Tenyleges[-1] - Tenyleges.1[-.N]) - (Menetrend.szerint[-1] - Menetrend.szerint.1[-.N])),
+  KumKeses = (Tenyleges - Menetrend.szerint),
+  ElozoAllomas = c(NA, Allomas[-.N])
+), .(Datum, Vonat, VonatSzam, VonatNev, VonatNevLabel, VonatNem)]
 
-ProcData[, ord := NULL]
-
-ProcData[, Nominalis := fifelse(Nominalis < -720, Nominalis + 1440, Nominalis)]
-ProcData[, KumNominalis := fifelse(KumNominalis < -720, KumNominalis + 1440, KumNominalis)]
-ProcData[, Tenyleges := fifelse(Tenyleges < -720, Tenyleges + 1440, Tenyleges)]
-ProcData[, KumTenyleges := fifelse(KumTenyleges < -720, KumTenyleges + 1440, KumTenyleges)]
+RawData[AllomasKeses > 720, AllomasKeses := AllomasKeses - 1440]
+RawData[AllomasKeses < -720, AllomasKeses := AllomasKeses + 1440]
+RawData[SzakaszKeses > 720, SzakaszKeses := SzakaszKeses - 1440]
+RawData[SzakaszKeses < -720, SzakaszKeses := SzakaszKeses + 1440]
+RawData[KumKeses > 720, KumKeses := KumKeses - 1440]
+RawData[KumKeses < -720, KumKeses := KumKeses + 1440]
 
 # Ez csak 2025-07-07-én kell
-# ProcData[Datum == "2025-07-07" & VonatNev %in% c("568 TOKAJ InterCity", "16706 ARANYPART Expresszvonat"),
+# RawData[Datum == "2025-07-07" & VonatNev %in% c("568 TOKAJ InterCity", "16706 ARANYPART Expresszvonat"),
 #          KumTenyleges := fifelse(KumTenyleges < -600, KumTenyleges + 1440, KumTenyleges)]
-
-ProcData$Keses <- ProcData$Tenyleges - ProcData$Nominalis
-ProcData$KumKeses <- ProcData$KumTenyleges - ProcData$KumNominalis
-
-localefactor <- function(x) factor(x, levels = stringr::str_sort(unique(x), locale = "hu"))
-
-ProcData$VonatNev <- localefactor(ProcData$VonatNev)
-ProcData$VonatNevLabel <- localefactor(ProcData$VonatNevLabel)
-ProcData$Indulo <- localefactor(ProcData$Indulo)
-ProcData$Erkezo <- localefactor(ProcData$Erkezo)
-ProcData$Tipus <- localefactor(ProcData$Tipus)
-ProcData$VonatNem <- localefactor(ProcData$VonatNem)
 
 patternKiindulasi <- ".*?\\((.*) -.*"
 patternCel <- ".*?\\(.*? - (.*)\\).*"
+RawData$Kiindulasi <- ifelse(grepl(patternKiindulasi, RawData$VonatNevLabel),
+                             sub(patternKiindulasi, "\\1", RawData$VonatNevLabel), NA_character_)
+RawData$Cel <- ifelse(grepl(patternCel, RawData$VonatNevLabel),
+                      sub(patternCel, "\\1", RawData$VonatNevLabel), NA_character_)
 
-ProcData$Kiindulasi <- ifelse(grepl(patternKiindulasi, ProcData$VonatNevLabel),
-                              sub(patternKiindulasi, "\\1", ProcData$VonatNevLabel), NA_character_)
-ProcData$Cel <- ifelse(grepl(patternCel, ProcData$VonatNevLabel),
-                       sub(patternCel, "\\1", ProcData$VonatNevLabel), NA_character_)
-
-ProcData <- ProcData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Indulo, Erkezo, Tipus, Keses, KumKeses, VonatNem, Kiindulasi, Cel)]
-
-# saveRDS(ProcData, "./data/ProcData.rds")
-
-yms <- unique(ProcData[, .(Year = lubridate::year(Datum),
-                           Month = lubridate::month(Datum))])
-
-for(i in 1:nrow(yms)) arrow::write_feather(ProcData[lubridate::year(Datum) == yms$Year[i] & lubridate::month(Datum) == yms$Month[i]],
-                                           paste0("./data/ProcData", yms$Year[i], sprintf("%02d", yms$Month[i]), ".feather"))
-
-RawData <- RawData[order(Datum, Vonat, VonatNev)]
+localefactor <- function(x) factor(x, levels = stringr::str_sort(unique(x), locale = "hu"))
 
 RawData$VonatNev <- localefactor(RawData$VonatNev)
+RawData$Allomas <- localefactor(RawData$Allomas)
 RawData$VonatNevLabel <- localefactor(RawData$VonatNevLabel)
 RawData$VonatNem <- localefactor(RawData$VonatNem)
+RawData$Tipus <- localefactor(RawData$Tipus)
+RawData$Kiindulasi <- localefactor(RawData$Kiindulasi)
+RawData$Cel <- localefactor(RawData$Cel)
+RawData$ElozoAllomas <- localefactor(RawData$ElozoAllomas)
 
-RawData <- RawData[, .(Datum, VonatSzam, VonatNev, VonatNevLabel, Állomás, Menetrend.szerint, Menetrend.szerint.1, Tényleges, Tényleges.1, VonatNem)]
+RawData <- RawData[order(Datum, Vonat)]
 
 # saveRDS(RawData, "./data/RawData.rds")
 
@@ -249,35 +266,23 @@ for(i in 1:nrow(yms)) arrow::write_feather(RawData[lubridate::year(Datum) == yms
                                            paste0("./data/RawData", yms$Year[i], sprintf("%02d", yms$Month[i]), ".feather"))
 
 saveRDS(list(
-  VonatNev = with(unique(ProcData[, .(VonatSzam, VonatNevLabel)])[order(VonatSzam)], setNames(VonatSzam, VonatNevLabel)),
-  VonatNem = sort(unique(ProcData$VonatNem)),
-  AllomasErkezo = sort(unique(ProcData$Erkezo)),
-  AllomasErkezoIndulo =
-    sort(unique(c(ProcData$Indulo, ProcData$Erkezo))),
-  AllomasKiindulasi = sort(unique(ProcData$Kiindulasi)),
-  AllomasCel = sort(unique(ProcData$Cel))
+  VonatNev = with(unique(RawData[, .(VonatSzam, VonatNevLabel)])[order(VonatSzam)], setNames(VonatSzam, VonatNevLabel)),
+  VonatNem = sort(unique(RawData$VonatNem)),
+  Allomas = sort(unique(RawData$Allomas)),
+  AllomasKiindulasi = sort(unique(RawData$Kiindulasi)),
+  AllomasCel = sort(unique(RawData$Cel))
 ), "./data/choices.rds")
 
 ##### Előre aggregált trend adatok #####
 
-ProcDataAll <- arrow::open_dataset(
-  list.files("./data/", "ProcData", full.names = TRUE),
-  format = "feather"
-)
-
-trendBase <- ProcDataAll |>
-  dplyr::filter(Tipus %in% c("Szakasz", "ZaroSzakasz")) |>
-  dplyr::collect() |>
-  setDT()
-
 TrendAgg <- list(
-  all        = rbind(trendBase[, kesesstat(KumKeses), .(Datum)],
-                     unique(trendBase, by = c("Datum", "VonatSzam"))[
+  all        = rbind(RawData[, kesesstat(KumKeses), .(Datum)],
+                     unique(RawData, by = c("Datum", "VonatSzam"))[
                        , .(stat = "Vonatok száma", value1 = as.numeric(.N),
                            value2 = NA_real_, formatted = as.character(.N)),
                        .(Datum)])[order(Datum)],
-  byVonatNem = rbind(trendBase[, kesesstat(KumKeses), .(Datum, VonatNem)],
-                     unique(trendBase, by = c("Datum", "VonatSzam"))[
+  byVonatNem = rbind(RawData[, kesesstat(KumKeses), .(Datum, VonatNem)],
+                     unique(RawData, by = c("Datum", "VonatSzam"))[
                        , .(stat = "Vonatok száma", value1 = as.numeric(.N),
                            value2 = NA_real_, formatted = as.character(.N)),
                        .(Datum, VonatNem)])[order(Datum, VonatNem)]
@@ -293,10 +298,8 @@ TrendAgg$all[, yearweek := paste0(lubridate::isoyear(Datum), " - ",
 
 saveRDS(TrendAgg, "./data/TrendAgg.rds")
 
-saveRDS(
-  list(min = min(trendBase$Datum), max = max(trendBase$Datum)),
-  "./data/daterange.rds"
-)
+saveRDS(list(min = min(RawData$Datum), max = max(RawData$Datum)),
+        "./data/daterange.rds")
 
 ##### Állomás #####
 
@@ -321,7 +324,7 @@ if(!is.null(allomaskoord)) {
 
 ##### Meteorológiai adatok #####
 
-MetData <- tryCatch(rbindlist(lapply(unique(format(unique(trendBase$Datum), "%Y")), function(yr)
+MetData <- tryCatch(rbindlist(lapply(unique(format(unique(RawData$Datum), "%Y")), function(yr)
   fread(paste0("https://data.meteostat.net/daily/", yr, "/12840.csv.gz")))), error = function(e) {
     print(e)
     return(NULL)

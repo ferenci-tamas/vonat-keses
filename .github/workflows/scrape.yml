@@ -3,6 +3,7 @@ name: Napi update
 on:
   schedule:
     - cron: '10 20 * * *'
+      timezone: "Europe/Budapest"
 
   workflow_dispatch:
 

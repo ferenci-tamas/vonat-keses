@@ -8,3 +8,9 @@ RawData <- rbindlist(lapply(
     rbindlist(readRDS(f), use.names = TRUE, fill = TRUE)),
   use.names = TRUE, fill = TRUE)
 gc()
+
+RawData <- RawData[, .(Km, Allomas = Állomás, Menetrend.szerint,
+                       Menetrend.szerint.1,
+                       Tenyleges = Tényleges, Tenyleges.1 = Tényleges.1,
+                       Vonat, VonatNev = VonatSzam, Datum)]
+gc()

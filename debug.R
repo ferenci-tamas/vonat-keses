@@ -74,30 +74,3 @@ RawData <- RawData[, if (.N > 1) .SD, .(Datum, Vonat)]
 RawData[, Kovetett := sum(!is.na(Tenyleges)) > 0 || sum(!is.na(Tenyleges.1)) > 0, .(Datum, Vonat)]
 RawData <- RawData[Kovetett == TRUE]
 RawData$Kovetett <- NULL
-
-# RawData[, .N, .(Datum)]
-# plot(N ~ Datum, data = RawData[, .N, .(Datum)], type = "l")
-
-RawData[Allomas == "Bélapátfalvi Cementgyár"]$Allomas <- "Bélapátfalvai Cementgyár"
-
-RawData[, VonatSzam := as.numeric(sub(" .*", "", VonatNev))]
-
-RawData[, VonatNev := trimws(gsub("[\\s\\h]+", " ", VonatNev, perl = TRUE))]
-
-# Ez csak 2025-06-11 és 2025-06-20 között kell
-for(remstr in paste0(", 2025.06.", 11:20, "."))
-  RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20", VonatNev := gsub(remstr, "", VonatNev)]
-temp <- unlist(strsplit(unique(RawData$VonatNev), " "))
-for(remstr in c(unique(paste0(temp[grep("^S\\d+$", temp)], " ")),
-                unique(paste0(temp[grep("^Z\\d+$", temp)], " ")),
-                unique(paste0(temp[grep("^G\\d+$", temp)], " ")),
-                unique(paste0(temp[grep("^IR\\d+$", temp)], " "))))
-  RawData[Datum >= "2025-06-11" & Datum <= "2025-06-20",
-          VonatNev := gsub(remstr, "", VonatNev)]
-rm(temp)
-
-RawData[, VonatNev := gsub("TramTrain 1", "TramTrain", VonatNev)]
-
-RawData <- merge(RawData,
-                 RawData[, .(VonatNevLabel = names(sort(table(VonatNev), decreasing = TRUE))[1]), .(VonatSzam)],
-                 by = "VonatSzam", sort = FALSE)

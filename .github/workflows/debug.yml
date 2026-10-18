@@ -11,6 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Add swap space
+        run: |
+          sudo fallocate -l 8G /swapfile-ci
+          sudo chmod 600 /swapfile-ci
+          sudo mkswap /swapfile-ci
+          sudo swapon /swapfile-ci
+
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         
